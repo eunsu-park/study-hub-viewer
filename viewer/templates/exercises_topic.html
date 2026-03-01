@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ display_name }} Exercises - Study Viewer{% endblock %}
+
+{% block header %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('exercises_index', lang=lang) }}">Exercises</a>
+    <span class="separator">/</span>
+    <span class="current">{{ display_name }}</span>
+</nav>
+<h1>{{ display_name }}</h1>
+<p class="header-subtitle">{{ files|length }} files</p>
+{% endblock %}
+
+{% block content %}
+<div class="examples-topic-page">
+    <div class="examples-file-list">
+        {% set current_subdir = namespace(value=None) %}
+        {% for file in files %}
+            {% if file.subdir != current_subdir.value %}
+                {% if file.subdir %}
+                <div class="examples-subdir-header">
+                    <span class="subdir-name">{{ file.subdir }}/</span>
+                </div>
+                {% elif current_subdir.value is not none %}
+                <div class="examples-subdir-header">
+                    <span class="subdir-name">./</span>
+                </div>
+                {% endif %}
+                {% set current_subdir.value = file.subdir %}
+            {% endif %}
+            <a href="{{ url_for('exercise_file_view', lang=lang, topic_name=topic, filepath=file.path) }}" class="example-file-item">
+                <div class="example-file-info">
+                    <span class="example-file-name">{{ file.name }}</span>
+                    <div class="example-file-meta">
+                        <span class="example-lang-badge">{{ file.language }}</span>
+                        <span class="example-file-lines">{{ file.lines }} lines</span>
+                        <span class="example-file-size">{{ file.size }}</span>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

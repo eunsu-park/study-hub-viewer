@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Examples - Study Materials{% endblock %}
+
+{% block header %}
+<h1>Example Code</h1>
+<p class="header-subtitle">{{ topics|length }} topics with example files</p>
+{% endblock %}
+
+{% block content %}
+<div class="home">
+    <section class="home-section">
+        <div class="topics-grid">
+            {% for topic in topics %}
+            <a href="{{ base_url }}/examples/{{ topic.name }}/" class="topic-card">
+                <div class="topic-card-header">
+                    <h4 class="topic-name">{{ topic.display_name }}</h2>
+                    <span class="lesson-count">{{ topic.file_count }} files</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ filename }} - {{ display_name }} Exercises - Study Viewer{% endblock %}
+
+{% block header %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('exercises_index', lang=lang) }}">Exercises</a>
+    <span class="separator">/</span>
+    <a href="{{ url_for('exercises_topic', lang=lang, topic_name=topic) }}">{{ display_name }}</a>
+    <span class="separator">/</span>
+    <span class="current">{{ filepath }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="example-viewer">
+    <div class="example-viewer-header">
+        <div class="example-viewer-info">
+            <h1 class="example-viewer-title">{{ filename }}</h1>
+            <div class="example-viewer-meta">
+                <span class="example-lang-badge">{{ highlighted.language }}</span>
+                <span>{{ highlighted.lines }} lines</span>
+                <span>{{ highlighted.size }}</span>
+            </div>
+        </div>
+        <div class="example-viewer-actions">
+            {% if related_lesson %}
+            <a href="{{ url_for('lesson', lang=lang, name=topic, filename=related_lesson.filename) }}" class="btn btn-related-lesson" title="Related lesson">
+                <span class="text">{{ related_lesson.title }}</span>
+            </a>
+            {% endif %}
+            <button class="btn btn-copy-code" id="btn-copy-code" title="Copy code">
+                <span class="text">Copy</span>
+            </button>
+            <a href="{{ url_for('exercise_raw', topic_name=topic, filepath=filepath) }}" class="btn" download title="Download file">
+                <span class="text">Download</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="example-viewer-code">
+        {{ highlighted.html|safe }}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('btn-copy-code');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                const codeEl = document.querySelector('.example-viewer-code .highlight code, .example-viewer-code .highlight pre');
+                if (codeEl) {
+                    const lines = document.querySelectorAll('.example-viewer-code .linenodiv');
+                    let text;
+                    if (lines.length > 0) {
+                        const codeTable = document.querySelector('.example-viewer-code .highlighttable .code pre');
+                        text = codeTable ? codeTable.textContent : codeEl.textContent;
+                    } else {
+                        text = codeEl.textContent;
+                    }
+                    navigator.clipboard.writeText(text);
+                    const textEl = this.querySelector('.text');
+                    textEl.textContent = 'Copied!';
+                    setTimeout(() => { textEl.textContent = 'Copy'; }, 2000);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

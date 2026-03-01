@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Study Materials - Home{% endblock %}
+
+{% block header %}
+<h1>Home</h1>
+<p class="header-subtitle">Study materials covering {{ topics|length }} topics</p>
+{% endblock %}
+
+{% block content %}
+<div class="home">
+    <!-- Topics by Tier -->
+    <section class="home-section">
+        <h2>All Topics ({{ topics|length }})</h2>
+
+        <!-- Tier Filter Buttons -->
+        <div class="tier-filters">
+            <button class="tier-filter-btn active" data-tier="all">
+                {% if lang == 'ko' %}전체{% else %}All{% endif %}
+            </button>
+            {% for tier in tiers %}
+            <button class="tier-filter-btn" data-tier="{{ tier.id }}" style="--tier-color: {{ tier.color }}">
+                {{ tier.label[lang] }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- Tier Groups -->
+        {% for tier in tiers %}
+        {% set group_topics = tier_groups.get(tier.id, []) %}
+        {% if group_topics %}
+        <div class="tier-group" data-tier="{{ tier.id }}" style="--tier-color: {{ tier.color }}">
+            <h3 class="tier-group-title">
+                <span class="tier-badge tier-{{ tier.id }}">{{ tier.label[lang] }}</span>
+                <span class="tier-group-desc">{{ tier.description[lang] }}</span>
+                <span class="tier-group-count">({{ group_topics|length }})</span>
+            </h3>
+            <div class="topics-grid">
+                {% for topic in group_topics %}
+                <a href="{{ base_url }}/{{ lang }}/{{ topic.name }}/" class="topic-card">
+                    <div class="topic-card-header">
+                        <h4 class="topic-name">{{ topic.display_name }}</h2>
+                        <span class="lesson-count">{{ topic.lesson_count }} lessons</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if tier_groups.get('uncategorized') %}
+        <div class="tier-group" data-tier="uncategorized">
+            <h3 class="tier-group-title">
+                <span class="tier-badge">Uncategorized</span>
+            </h3>
+            <div class="topics-grid">
+                {% for topic in tier_groups['uncategorized'] %}
+                <a href="{{ base_url }}/{{ lang }}/{{ topic.name }}/" class="topic-card">
+                    <div class="topic-card-header">
+                        <h4 class="topic-name">{{ topic.display_name }}</h2>
+                        <span class="lesson-count">{{ topic.lesson_count }} lessons</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

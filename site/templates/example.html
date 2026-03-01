@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ filename }} - Examples{% endblock %}
+
+{% block header %}
+<nav class="breadcrumb">
+    <a href="{{ base_url }}/examples/">Examples</a>
+    <span class="separator">/</span>
+    <a href="{{ base_url }}/examples/{{ topic }}/">{{ topic_display }}</a>
+    <span class="separator">/</span>
+    <span class="current">{{ filename }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<article class="example-article">
+    <header class="example-header">
+        <h1>{{ filename }}</h1>
+        <div class="example-actions">
+            <a href="{{ raw_url }}" download class="btn">Download</a>
+            <button class="btn" id="copy-code-btn">Copy code</button>
+        </div>
+    </header>
+
+    <div class="example-meta">
+        <span>{{ language }}</span>
+        <span>{{ line_count }} lines</span>
+        <span>{{ file_size }}</span>
+    </div>
+
+    <div class="example-code markdown-body">
+        {{ highlighted_code }}
+    </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('copy-code-btn').addEventListener('click', function() {
+        var code = document.querySelector('.example-code .highlight');
+        // Extract just the code text, not line numbers
+        var lines = code.querySelectorAll('.code pre span.line');
+        var text;
+        if (lines.length > 0) {
+            text = Array.from(lines).map(function(l) { return l.textContent; }).join('\n');
+        } else {
+            // Fallback: get all code text
+            var codeEl = code.querySelector('pre code') || code.querySelector('pre');
+            text = codeEl ? codeEl.textContent : code.textContent;
+        }
+        navigator.clipboard.writeText(text);
+        this.textContent = 'Copied!';
+        var btn = this;
+        setTimeout(function() { btn.textContent = 'Copy code'; }, 2000);
+    });
+</script>
+{% endblock %}
