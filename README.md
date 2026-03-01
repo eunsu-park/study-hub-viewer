@@ -1,8 +1,8 @@
 # Study Hub Viewer
 
-A collection of viewer and site generation tools for [Study Hub](https://github.com/eunsu-park/study_hub): a personal Flask viewer with progress tracking and search, a multi-user Flask viewer with authentication, and a static site generator for GitHub Pages.
+A collection of viewer and site generation tools for [Study Hub](https://github.com/eunsu-park/study-hub): a personal Flask viewer with progress tracking and search, a multi-user Flask viewer with authentication, and a static site generator for GitHub Pages.
 
-[Study Hub](https://github.com/eunsu-park/study_hub) 학습 자료를 위한 뷰어/사이트 생성 도구 모음. 개인용 Flask 뷰어(진행률 추적, 검색), 다중 사용자 Flask 뷰어(인증), 정적 사이트 생성기(GitHub Pages)를 포함합니다.
+[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 뷰어/사이트 생성 도구 모음. 개인용 Flask 뷰어(진행률 추적, 검색), 다중 사용자 Flask 뷰어(인증), 정적 사이트 생성기(GitHub Pages)를 포함합니다.
 
 ## Tools / 도구
 
@@ -14,26 +14,26 @@ A collection of viewer and site generation tools for [Study Hub](https://github.
 
 ## Prerequisites / 사전 요구사항
 
-This repo references content from the study_hub repository. Clone it first.
+This repo references content from the study-hub repository. Clone it first.
 
-이 레포는 study_hub 레포의 콘텐츠를 참조합니다. 먼저 study_hub를 clone하세요.
+이 레포는 study-hub 레포의 콘텐츠를 참조합니다. 먼저 study-hub를 clone하세요.
 
 ```bash
-git clone https://github.com/eunsu-park/study_hub.git ~/repos/study_hub
-git clone https://github.com/eunsu-park/study_hub_viewer.git ~/repos/study_hub_viewer
+git clone https://github.com/eunsu-park/study-hub.git ~/repos/study-hub
+git clone https://github.com/eunsu-park/study-hub_viewer.git ~/repos/study_hub_viewer
 ```
 
 ## Environment Setup / 환경 설정
 
-Set the `STUDY_HUB_PATH` environment variable to point to your study_hub repo.
+Set the `STUDY_HUB_PATH` environment variable to point to your study-hub repo.
 
-`STUDY_HUB_PATH` 환경변수로 study_hub 레포 경로를 지정합니다.
+`STUDY_HUB_PATH` 환경변수로 study-hub 레포 경로를 지정합니다.
 
 ```bash
-export STUDY_HUB_PATH=~/repos/study_hub
+export STUDY_HUB_PATH=~/repos/study-hub
 
 # Or add to .env file / 또는 .env 파일에 추가
-echo 'STUDY_HUB_PATH=~/repos/study_hub' >> .env
+echo 'STUDY_HUB_PATH=~/repos/study-hub' >> .env
 ```
 
 > If not set, the parent directory (`../`) is used as fallback.
@@ -103,7 +103,7 @@ cd site
 pip install -r requirements.txt
 python build.py --clean
 # Or specify content directory:
-python build.py --content-dir ~/repos/study_hub --clean
+python build.py --content-dir ~/repos/study-hub --clean
 ```
 
 Options: `--output <dir>`, `--base-url <path>`, `--content-dir <path>`, `--clean`
