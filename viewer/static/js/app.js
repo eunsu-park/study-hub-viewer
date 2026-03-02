@@ -1,6 +1,14 @@
 /**
- * Study Viewer - Main JavaScript
+ * Multi-User Study Viewer - Main JavaScript
  */
+
+/**
+ * Get CSRF token from meta tag (set by Flask-WTF)
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Theme Toggle

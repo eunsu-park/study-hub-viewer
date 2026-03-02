@@ -9,6 +9,7 @@
 
 {% block content %}
 <div class="home">
+    {% if not auth_enabled or current_user.is_authenticated %}
     <!-- Overall Progress -->
     <section class="home-section">
         <h2>Overview</h2>
@@ -90,6 +91,7 @@
             {% endfor %}
         </div>
     </section>
+    {% endif %}
     {% endif %}
 
     <!-- Topics by Tier -->

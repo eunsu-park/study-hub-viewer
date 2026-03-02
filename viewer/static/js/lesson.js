@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const isRead = !this.classList.contains('active');
             const response = await fetch('/api/mark-read', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ lang, topic, filename, is_read: isRead })
             });
             if (response.ok) {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', async function() {
             const response = await fetch('/api/bookmark', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ lang, topic, filename })
             });
             if (response.ok) {

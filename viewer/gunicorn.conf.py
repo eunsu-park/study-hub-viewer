@@ -1,8 +1,8 @@
-"""Gunicorn configuration for Multi-User Study Viewer."""
+"""Gunicorn configuration for Study Viewer."""
 import multiprocessing
 
 # Server socket
-bind = "127.0.0.1:5051"
+bind = "127.0.0.1:5050"
 
 # Worker processes
 workers = min(multiprocessing.cpu_count(), 4)

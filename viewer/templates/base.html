@@ -26,6 +26,9 @@
             ],
             throwOnError: false
         });"></script>
+    {% if auth_enabled %}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% endif %}
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -84,6 +87,19 @@
             </div>
 
             <div class="sidebar-footer">
+                {% if auth_enabled %}
+                {% if current_user.is_authenticated %}
+                <div class="sidebar-user">
+                    <span class="user-name">{{ current_user.display_name or current_user.username }}</span>
+                    <form action="{{ url_for('auth.logout') }}" method="POST" class="logout-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-logout" title="Logout">Logout</button>
+                    </form>
+                </div>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn-login">Login</a>
+                {% endif %}
+                {% endif %}
                 <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
                     <span class="theme-icon light">{{ icon('sun', 18) }}</span>
                     <span class="theme-icon dark">{{ icon('moon', 18) }}</span>

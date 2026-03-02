@@ -2,8 +2,12 @@
 """Build the full-text search index for the Study Viewer."""
 
 import os
+import sys
 from pathlib import Path
-from utils.search import build_search_index, build_example_index, create_fts_table
+
+# Add parent dir to path for shared/ package
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from shared.utils.search import build_search_index, build_example_index, create_fts_table
 
 # Paths
 BASE_DIR = Path(__file__).parent

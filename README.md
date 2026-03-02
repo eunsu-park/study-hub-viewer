@@ -1,15 +1,14 @@
 # Study Hub Viewer
 
-A collection of viewer and site generation tools for [Study Hub](https://github.com/eunsu-park/study-hub): a personal Flask viewer with progress tracking and search, a multi-user Flask viewer with authentication, and a static site generator for GitHub Pages.
+A collection of viewer and site generation tools for [Study Hub](https://github.com/eunsu-park/study-hub): a unified Flask viewer with optional authentication and progress tracking, and a static site generator for GitHub Pages.
 
-[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 뷰어/사이트 생성 도구 모음. 개인용 Flask 뷰어(진행률 추적, 검색), 다중 사용자 Flask 뷰어(인증), 정적 사이트 생성기(GitHub Pages)를 포함합니다.
+[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 뷰어/사이트 생성 도구 모음. 통합 Flask 뷰어(선택적 인증, 진행률 추적, 검색)와 정적 사이트 생성기(GitHub Pages)를 포함합니다.
 
 ## Tools / 도구
 
 | Tool | Description | Port |
 |------|-------------|------|
-| **viewer/** | Personal Flask web viewer / 개인용 Flask 웹 뷰어 | 5050 |
-| **multi_viewer/** | Multi-user Flask viewer (auth, per-user data) / 다중 사용자 Flask 뷰어 | 5051 |
+| **viewer/** | Unified Flask web viewer (single/multi-user) / 통합 Flask 웹 뷰어 | 5050 |
 | **site/** | Static site generator (GitHub Pages) / 정적 사이트 생성기 | — |
 
 ## Prerequisites / 사전 요구사항
@@ -41,11 +40,13 @@ echo 'STUDY_HUB_PATH=~/repos/study-hub' >> .env
 
 ---
 
-## Viewer (Personal / 개인용)
+## Viewer (Unified / 통합 뷰어)
 
-Single-user local study viewer. No authentication.
+Single-user or multi-user mode, controlled by `AUTH_ENABLED` environment variable.
 
-단일 사용자 로컬 학습 뷰어. 인증 없음.
+단일/다중 사용자 모드를 `AUTH_ENABLED` 환경변수로 전환합니다.
+
+### Single-user mode (default) / 단일 사용자 모드 (기본)
 
 ```bash
 cd viewer
@@ -55,40 +56,30 @@ flask run --port 5050
 # http://127.0.0.1:5050
 ```
 
-> Details: [viewer/README.md](viewer/README.md)
-
----
-
-## Multi Viewer (Multi-user / 다중 사용자)
-
-Multi-user viewer for server deployment. Flask-Login + bcrypt auth, per-user data isolation.
-
-서버 배포용 다중 사용자 뷰어. Flask-Login + bcrypt 인증, 유저별 데이터 격리.
+### Multi-user mode / 다중 사용자 모드
 
 ```bash
-cd multi_viewer
-pip install -r requirements.txt
-flask init-db && flask build-index
-flask create-user --username admin
-flask run --port 5051
-# http://127.0.0.1:5051
+cd viewer
+cp .env.example .env
+# Edit .env: AUTH_ENABLED=true, set SECRET_KEY
+
+AUTH_ENABLED=true flask init-db
+AUTH_ENABLED=true flask build-index
+AUTH_ENABLED=true flask create-user --username admin
+AUTH_ENABLED=true flask run --port 5050
 ```
 
 ### Production / 프로덕션 배포
 
 ```bash
-# Set environment variables / 환경변수 설정
-cp multi_viewer/.env.example multi_viewer/.env
-# Generate SECRET_KEY: python -c "import secrets; print(secrets.token_hex(32))"
+cp viewer/.env.example viewer/.env
+# Edit .env: AUTH_ENABLED=true, SECRET_KEY, FLASK_ENV=production
 
-# Run with Gunicorn / Gunicorn으로 실행
-cd multi_viewer
+cd viewer
 gunicorn -c gunicorn.conf.py app:app
 ```
 
-Nginx config: [multi_viewer/nginx.conf.example](multi_viewer/nginx.conf.example)
-
-> Details: [multi_viewer/README.md](multi_viewer/README.md)
+> Details: [viewer/README.md](viewer/README.md)
 
 ---
 
@@ -114,30 +105,29 @@ Options: `--output <dir>`, `--base-url <path>`, `--content-dir <path>`, `--clean
 
 ```
 study_hub_viewer/
-├── viewer/              # Personal Flask viewer (port 5050)
-│   ├── app.py
-│   ├── config.py        # STUDY_HUB_PATH env var support
-│   ├── models.py
-│   ├── build_index.py
-│   ├── templates/
-│   ├── static/
+├── shared/                 # Shared utilities (used by viewer/ and site/)
 │   └── utils/
+│       ├── markdown_parser.py
+│       ├── search.py
+│       ├── examples.py
+│       └── exercises.py
 │
-├── multi_viewer/        # Multi-user Flask viewer (port 5051)
-│   ├── app.py
-│   ├── auth.py          # Auth Blueprint (login/logout, CLI)
-│   ├── config.py        # STUDY_HUB_PATH + security settings
-│   ├── models.py        # User, LessonRead, Bookmark (with user_id)
-│   ├── forms.py
-│   ├── gunicorn.conf.py
-│   ├── nginx.conf.example
+├── viewer/                 # Unified Flask viewer (port 5050)
+│   ├── app.py              # Main app (AUTH_ENABLED toggle)
+│   ├── auth.py             # Auth Blueprint (login/logout, CLI)
+│   ├── config.py           # Configuration + security settings
+│   ├── models.py           # User, LessonRead, Bookmark
+│   ├── forms.py            # WTForms (LoginForm)
+│   ├── progress.py         # Batch query helpers (N+1 optimized)
+│   ├── build_index.py      # FTS index builder
+│   ├── migrate_db.py       # DB migration script
+│   ├── gunicorn.conf.py    # Production config
 │   ├── .env.example
 │   ├── templates/
-│   ├── static/
-│   └── utils/
+│   └── static/
 │
-├── site/                # Static site generator
-│   ├── build.py         # --content-dir option
+├── site/                   # Static site generator
+│   ├── build.py
 │   ├── config.py
 │   ├── builders/
 │   ├── templates/

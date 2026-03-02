@@ -1,25 +1,62 @@
-"""Study Materials Web Viewer - Flask Application with Multi-language Support."""
+"""Study Materials Web Viewer - Unified Flask Application.
+
+Supports both single-user (AUTH_ENABLED=false) and multi-user (AUTH_ENABLED=true) modes.
+"""
 import os
+import re
+import sys
 from collections import OrderedDict
 from datetime import datetime, timezone
+from functools import lru_cache, wraps
 from pathlib import Path
-from functools import wraps
+from types import SimpleNamespace
 
 import yaml
 
 from flask import Flask, render_template, request, jsonify, abort, redirect, url_for, make_response
-from models import db, LessonRead, Bookmark
+
+# Add parent dir to path so shared/ package is importable
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from models import db, User, LessonRead, Bookmark
 from config import Config
-from utils.markdown_parser import parse_markdown, parse_markdown_cached, extract_excerpt, estimate_reading_time
-from utils.search import search, build_search_index, build_example_index, build_exercise_index, create_fts_table
-from utils.examples import get_example_topics, get_example_files, highlight_file
-from utils.exercises import get_exercise_topics, get_exercise_files, find_exercise_for_lesson
+from progress import get_batch_progress, get_batch_read_status, get_batch_bookmark_status
+from shared.utils.markdown_parser import parse_markdown, parse_markdown_cached, extract_excerpt, estimate_reading_time
+from shared.utils.search import search, build_search_index, build_example_index, build_exercise_index, create_fts_table
+from shared.utils.examples import get_example_topics, get_example_files, highlight_file
+from shared.utils.exercises import get_exercise_topics, get_exercise_files, find_exercise_for_lesson
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
 # Initialize database
 db.init_app(app)
+
+AUTH_ENABLED = app.config.get("AUTH_ENABLED", False)
+
+# Conditional auth initialization
+if AUTH_ENABLED:
+    from flask_login import current_user, login_required
+    from flask_wtf.csrf import CSRFProtect
+    from auth import auth_bp, login_manager, register_cli
+
+    login_manager.init_app(app)
+    csrf = CSRFProtect(app)
+    app.register_blueprint(auth_bp)
+    register_cli(app)
+
+    # Enable SQLite WAL mode for concurrent reads
+    with app.app_context():
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.commit()
+
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Login required"}), 401
+        return redirect(url_for("auth.login", next=request.url))
 
 CONTENT_DIR = Config.CONTENT_DIR
 EXAMPLES_DIR = Config.EXAMPLES_DIR
@@ -29,6 +66,33 @@ DEFAULT_LANG = Config.DEFAULT_LANGUAGE
 LANGUAGE_NAMES = Config.LANGUAGE_NAMES
 
 
+# Auth helpers
+def _get_user_id():
+    """Get current user ID. Returns None in single-user mode."""
+    if AUTH_ENABLED:
+        from flask_login import current_user as _cu
+        return _cu.id if _cu.is_authenticated else None
+    return None
+
+
+def auth_required(f):
+    """Require login only when AUTH_ENABLED=true. No-op otherwise."""
+    if AUTH_ENABLED:
+        from flask_login import login_required
+        return login_required(f)
+    return f
+
+
+@app.context_processor
+def inject_auth_state():
+    """Make auth_enabled and current_user available in all templates."""
+    ctx = {"auth_enabled": AUTH_ENABLED}
+    if not AUTH_ENABLED:
+        ctx["current_user"] = SimpleNamespace(is_authenticated=False)
+    return ctx
+
+
+# Template filters
 @app.template_filter("timeago")
 def timeago_filter(dt):
     """Format a datetime as a relative time string."""
@@ -49,6 +113,7 @@ def timeago_filter(dt):
         return dt.strftime("%Y-%m-%d")
 
 
+# Content helpers
 def get_content_dir(lang: str) -> Path:
     """Get content directory for a specific language."""
     return CONTENT_DIR / lang
@@ -85,7 +150,7 @@ def load_topic_metadata() -> dict:
 
 
 def get_tier_for_topic(topic_name: str) -> dict | None:
-    """Get tier info for a single topic. Returns None if not classified."""
+    """Get tier info for a single topic."""
     meta = load_topic_metadata()
     topic_meta = meta.get("topics", {}).get(topic_name)
     if not topic_meta:
@@ -98,7 +163,7 @@ def get_tier_for_topic(topic_name: str) -> dict | None:
 
 
 def get_tier_groups(topics: list[dict], lang: str) -> OrderedDict:
-    """Group topics by tier. Returns OrderedDict keyed by tier id."""
+    """Group topics by tier."""
     meta = load_topic_metadata()
     tiers = meta.get("tiers", [])
     topic_assignments = meta.get("topics", {})
@@ -137,7 +202,6 @@ def get_topics(lang: str) -> list[dict]:
             "lesson_count": len(lessons),
             "display_name": topic_dir.name.replace("_", " "),
         }
-        # Inject tier info
         assignment = topic_assignments.get(topic_dir.name)
         if assignment:
             topic_info["tier"] = assignment.get("tier")
@@ -145,52 +209,36 @@ def get_topics(lang: str) -> list[dict]:
     return topics
 
 
-def get_lessons(lang: str, topic: str) -> list[dict]:
-    """Get list of lessons for a topic in a language."""
+@lru_cache(maxsize=128)
+def _get_lessons_cached(lang: str, topic: str, dir_mtime: float) -> tuple:
+    """Cached lesson list. Cache key includes dir mtime for invalidation."""
     topic_dir = get_content_dir(lang) / topic
-    if not topic_dir.exists():
-        return []
-
     lessons = []
     for md_file in sorted(topic_dir.glob("*.md")):
         content = md_file.read_text(encoding="utf-8")
-        title = extract_title_from_content(content) or md_file.stem
+        title = _extract_title(content) or md_file.stem
         lessons.append({
             "filename": md_file.name,
             "title": title,
             "display_name": md_file.stem.replace("_", " "),
             "reading_time": estimate_reading_time(content),
         })
-    return lessons
+    return tuple(lessons)
 
 
-def extract_title_from_content(content: str) -> str:
+def get_lessons(lang: str, topic: str) -> list[dict]:
+    """Get list of lessons for a topic with filesystem caching."""
+    topic_dir = get_content_dir(lang) / topic
+    if not topic_dir.exists():
+        return []
+    mtime = topic_dir.stat().st_mtime
+    return [dict(l) for l in _get_lessons_cached(lang, topic, mtime)]
+
+
+def _extract_title(content: str) -> str:
     """Extract first H1 from content."""
-    import re
     match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
     return match.group(1).strip() if match else ""
-
-
-def get_progress(lang: str, topic: str) -> dict:
-    """Get reading progress for a topic in a language."""
-    lessons = get_lessons(lang, topic)
-    total = len(lessons)
-    read_count = LessonRead.query.filter_by(language=lang, topic=topic).count()
-    return {
-        "total": total,
-        "read": read_count,
-        "percentage": round(read_count / total * 100) if total > 0 else 0,
-    }
-
-
-def is_lesson_read(lang: str, topic: str, filename: str) -> bool:
-    """Check if a lesson has been read."""
-    return LessonRead.query.filter_by(language=lang, topic=topic, filename=filename).first() is not None
-
-
-def is_bookmarked(lang: str, topic: str, filename: str) -> bool:
-    """Check if a lesson is bookmarked."""
-    return Bookmark.query.filter_by(language=lang, topic=topic, filename=filename).first() is not None
 
 
 def get_available_languages() -> list[dict]:
@@ -213,12 +261,16 @@ def root():
 def index(lang: str):
     """Home page - learning hub with stats, recent activity, and topics grid."""
     topics = get_topics(lang)
+    user_id = _get_user_id()
+
+    # Batch progress query (N+1 fix)
+    progress_map = get_batch_progress(lang, user_id, topics)
     for topic in topics:
-        topic["progress"] = get_progress(lang, topic["name"])
+        topic["progress"] = progress_map[topic["name"]]
 
     # Overall progress
     total_lessons = sum(t["lesson_count"] for t in topics)
-    total_read = LessonRead.query.filter_by(language=lang).count()
+    total_read = sum(p["read"] for p in progress_map.values())
     overall = {
         "total": total_lessons,
         "read": total_read,
@@ -229,12 +281,22 @@ def index(lang: str):
     in_progress = [t for t in topics if 0 < t["progress"]["percentage"] < 100]
     in_progress.sort(key=lambda t: t["progress"]["read"], reverse=True)
 
-    # Recently read lessons (latest 5)
-    recent_reads = LessonRead.query.filter_by(language=lang) \
-        .order_by(LessonRead.read_at.desc()).limit(5).all()
+    # Recently read lessons (latest 5) - batch by unique topic
     recent_items = []
+    if AUTH_ENABLED:
+        if user_id:
+            recent_reads = LessonRead.query.filter_by(user_id=user_id, language=lang) \
+                .order_by(LessonRead.read_at.desc()).limit(5).all()
+        else:
+            recent_reads = []
+    else:
+        recent_reads = LessonRead.query.filter_by(user_id=None, language=lang) \
+            .order_by(LessonRead.read_at.desc()).limit(5).all()
+
+    recent_topics = {r.topic for r in recent_reads}
+    lessons_by_topic = {t: get_lessons(lang, t) for t in recent_topics}
     for r in recent_reads:
-        lessons = get_lessons(lang, r.topic)
+        lessons = lessons_by_topic.get(r.topic, [])
         info = next((l for l in lessons if l["filename"] == r.filename), None)
         if info:
             recent_items.append({
@@ -242,20 +304,32 @@ def index(lang: str):
                 "title": info["title"], "read_at": r.read_at,
             })
 
-    # Recent bookmarks (latest 5)
-    recent_bookmarks = Bookmark.query.filter_by(language=lang) \
-        .order_by(Bookmark.created_at.desc()).limit(5).all()
+    # Recent bookmarks (latest 5) - batch by unique topic
     bookmark_items = []
+    bookmark_count = 0
+    if AUTH_ENABLED:
+        if user_id:
+            recent_bookmarks = Bookmark.query.filter_by(user_id=user_id, language=lang) \
+                .order_by(Bookmark.created_at.desc()).limit(5).all()
+            bookmark_count = Bookmark.query.filter_by(user_id=user_id, language=lang).count()
+        else:
+            recent_bookmarks = []
+    else:
+        recent_bookmarks = Bookmark.query.filter_by(user_id=None, language=lang) \
+            .order_by(Bookmark.created_at.desc()).limit(5).all()
+        bookmark_count = Bookmark.query.filter_by(user_id=None, language=lang).count()
+
+    bm_topics = {b.topic for b in recent_bookmarks}
+    bm_lessons_by_topic = {t: get_lessons(lang, t) for t in bm_topics if t not in lessons_by_topic}
+    bm_lessons_by_topic.update(lessons_by_topic)
     for b in recent_bookmarks:
-        lessons = get_lessons(lang, b.topic)
+        lessons = bm_lessons_by_topic.get(b.topic, [])
         info = next((l for l in lessons if l["filename"] == b.filename), None)
         if info:
             bookmark_items.append({
                 "topic": b.topic, "filename": b.filename,
                 "title": info["title"],
             })
-
-    bookmark_count = Bookmark.query.filter_by(language=lang).count()
 
     # Tier grouping
     meta = load_topic_metadata()
@@ -288,11 +362,24 @@ def topic(lang: str, name: str):
         abort(404)
 
     lessons = get_lessons(lang, name)
-    for lesson in lessons:
-        lesson["is_read"] = is_lesson_read(lang, name, lesson["filename"])
-        lesson["is_bookmarked"] = is_bookmarked(lang, name, lesson["filename"])
+    user_id = _get_user_id()
 
-    progress = get_progress(lang, name)
+    # Batch read/bookmark status (N+1 fix)
+    filenames = [l["filename"] for l in lessons]
+    read_status = get_batch_read_status(lang, name, user_id, filenames)
+    bookmark_status = get_batch_bookmark_status(lang, name, user_id, filenames)
+    for lesson_item in lessons:
+        lesson_item["is_read"] = read_status[lesson_item["filename"]]
+        lesson_item["is_bookmarked"] = bookmark_status[lesson_item["filename"]]
+
+    total = len(lessons)
+    read_count = sum(1 for v in read_status.values() if v)
+    progress = {
+        "total": total,
+        "read": read_count,
+        "percentage": round(read_count / total * 100) if total > 0 else 0,
+    }
+
     tier = get_tier_for_topic(name)
     has_examples = (EXAMPLES_DIR / name).is_dir()
     has_exercises = (EXERCISES_DIR / name).is_dir()
@@ -319,8 +406,8 @@ def lesson(lang: str, name: str, filename: str):
         abort(404)
 
     parsed = parse_markdown_cached(str(filepath))
+    user_id = _get_user_id()
 
-    # Get prev/next lessons for navigation
     lessons = get_lessons(lang, name)
     current_idx = next(
         (i for i, l in enumerate(lessons) if l["filename"] == filename), -1
@@ -333,6 +420,25 @@ def lesson(lang: str, name: str, filename: str):
 
     exercise = find_exercise_for_lesson(EXERCISES_DIR, name, filename)
 
+    # Single-query read/bookmark check
+    is_read = False
+    is_bm = False
+    if AUTH_ENABLED:
+        if user_id:
+            is_read = LessonRead.query.filter_by(
+                user_id=user_id, language=lang, topic=name, filename=filename
+            ).first() is not None
+            is_bm = Bookmark.query.filter_by(
+                user_id=user_id, language=lang, topic=name, filename=filename
+            ).first() is not None
+    else:
+        is_read = LessonRead.query.filter_by(
+            user_id=None, language=lang, topic=name, filename=filename
+        ).first() is not None
+        is_bm = Bookmark.query.filter_by(
+            user_id=None, language=lang, topic=name, filename=filename
+        ).first() is not None
+
     return render_template(
         "lesson.html",
         topic=name,
@@ -340,8 +446,8 @@ def lesson(lang: str, name: str, filename: str):
         title=parsed["title"] or filename,
         content=parsed["html"],
         toc=parsed["toc"],
-        is_read=is_lesson_read(lang, name, filename),
-        is_bookmarked=is_bookmarked(lang, name, filename),
+        is_read=is_read,
+        is_bookmarked=is_bm,
         prev_lesson=prev_lesson,
         next_lesson=next_lesson,
         exercise=exercise,
@@ -376,15 +482,19 @@ def search_page(lang: str):
 
 @app.route("/<lang>/dashboard")
 @validate_lang
+@auth_required
 def dashboard(lang: str):
     """Dashboard page - overall progress."""
     topics = get_topics(lang)
-    for topic in topics:
-        topic["progress"] = get_progress(lang, topic["name"])
+    user_id = _get_user_id()
 
-    # Calculate overall progress
+    # Batch progress query (N+1 fix)
+    progress_map = get_batch_progress(lang, user_id, topics)
+    for topic_item in topics:
+        topic_item["progress"] = progress_map[topic_item["name"]]
+
     total_lessons = sum(t["lesson_count"] for t in topics)
-    total_read = LessonRead.query.filter_by(language=lang).count()
+    total_read = sum(p["read"] for p in progress_map.values())
     overall = {
         "total": total_lessons,
         "read": total_read,
@@ -402,12 +512,20 @@ def dashboard(lang: str):
 
 @app.route("/<lang>/bookmarks")
 @validate_lang
+@auth_required
 def bookmarks(lang: str):
     """Bookmarks page."""
-    bookmarked = Bookmark.query.filter_by(language=lang).order_by(Bookmark.created_at.desc()).all()
+    user_id = _get_user_id()
+    bookmarked = Bookmark.query.filter_by(user_id=user_id, language=lang) \
+        .order_by(Bookmark.created_at.desc()).all()
+
+    # Batch lesson lookup by unique topic
+    unique_topics = {bm.topic for bm in bookmarked}
+    lessons_by_topic = {t: get_lessons(lang, t) for t in unique_topics}
+
     items = []
     for bm in bookmarked:
-        lessons = get_lessons(lang, bm.topic)
+        lessons = lessons_by_topic.get(bm.topic, [])
         lesson_info = next((l for l in lessons if l["filename"] == bm.filename), None)
         if lesson_info:
             items.append({
@@ -491,7 +609,6 @@ def example_raw(topic_name: str, filepath: str):
 # Exercise Routes
 def _find_related_lesson(lang: str, topic_name: str, exercise_filepath: str) -> dict | None:
     """Find lesson matching exercise by numeric prefix."""
-    import re
     prefix_match = re.match(r"^(\d+)_", Path(exercise_filepath).name)
     if not prefix_match:
         return None
@@ -570,23 +687,27 @@ def exercise_raw(topic_name: str, filepath: str):
 
 # API Routes
 @app.route("/api/mark-read", methods=["POST"])
+@auth_required
 def api_mark_read():
     """Mark a lesson as read/unread."""
     data = request.get_json()
     lang = data.get("lang", DEFAULT_LANG)
-    topic = data.get("topic")
+    topic_name = data.get("topic")
     filename = data.get("filename")
     is_read = data.get("is_read", True)
 
     if lang not in SUPPORTED_LANGS:
         return jsonify({"error": "Unsupported language"}), 400
-    if not topic or not filename:
+    if not topic_name or not filename:
         return jsonify({"error": "Missing topic or filename"}), 400
 
-    existing = LessonRead.query.filter_by(language=lang, topic=topic, filename=filename).first()
+    user_id = _get_user_id()
+    existing = LessonRead.query.filter_by(
+        user_id=user_id, language=lang, topic=topic_name, filename=filename
+    ).first()
 
     if is_read and not existing:
-        lesson_read = LessonRead(language=lang, topic=topic, filename=filename)
+        lesson_read = LessonRead(user_id=user_id, language=lang, topic=topic_name, filename=filename)
         db.session.add(lesson_read)
         db.session.commit()
     elif not is_read and existing:
@@ -597,36 +718,42 @@ def api_mark_read():
 
 
 @app.route("/api/bookmark", methods=["POST"])
+@auth_required
 def api_bookmark():
     """Add or remove a bookmark."""
     data = request.get_json()
     lang = data.get("lang", DEFAULT_LANG)
-    topic = data.get("topic")
+    topic_name = data.get("topic")
     filename = data.get("filename")
 
     if lang not in SUPPORTED_LANGS:
         return jsonify({"error": "Unsupported language"}), 400
-    if not topic or not filename:
+    if not topic_name or not filename:
         return jsonify({"error": "Missing topic or filename"}), 400
 
-    existing = Bookmark.query.filter_by(language=lang, topic=topic, filename=filename).first()
+    user_id = _get_user_id()
+    existing = Bookmark.query.filter_by(
+        user_id=user_id, language=lang, topic=topic_name, filename=filename
+    ).first()
 
     if existing:
         db.session.delete(existing)
         db.session.commit()
         return jsonify({"success": True, "bookmarked": False})
     else:
-        bookmark = Bookmark(language=lang, topic=topic, filename=filename)
+        bookmark = Bookmark(user_id=user_id, language=lang, topic=topic_name, filename=filename)
         db.session.add(bookmark)
         db.session.commit()
         return jsonify({"success": True, "bookmarked": True})
 
 
 @app.route("/api/clear-user-data", methods=["POST"])
+@auth_required
 def api_clear_user_data():
     """Delete all reading history and bookmarks."""
-    deleted_reads = LessonRead.query.delete()
-    deleted_bookmarks = Bookmark.query.delete()
+    user_id = _get_user_id()
+    deleted_reads = LessonRead.query.filter_by(user_id=user_id).delete()
+    deleted_bookmarks = Bookmark.query.filter_by(user_id=user_id).delete()
     db.session.commit()
     return jsonify({
         "success": True,
@@ -684,11 +811,9 @@ def build_index():
         if lang_content_dir.exists():
             print(f"Building index for {lang}...")
             build_search_index(lang_content_dir, db_path, lang=lang)
-    # Index example code files
     if EXAMPLES_DIR.exists():
         print("Building example code index...")
         build_example_index(EXAMPLES_DIR, db_path)
-    # Index exercise files
     if EXERCISES_DIR.exists():
         print("Building exercise index...")
         build_exercise_index(EXERCISES_DIR, db_path)
@@ -698,4 +823,4 @@ def build_index():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=True, port=5050)

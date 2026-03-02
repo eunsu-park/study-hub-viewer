@@ -14,7 +14,9 @@
     <span class="tier-badge tier-{{ tier.id }}" style="--tier-color: {{ tier.color }}">{{ tier.label[lang] }}</span>
     {% endif %}
     <span class="lesson-count">{{ lessons|length }} {% if lang == 'ko' %}레슨{% else %}lessons{% endif %}</span>
+    {% if not auth_enabled or current_user.is_authenticated %}
     <span class="progress-badge">{{ progress.percentage }}% {% if lang == 'ko' %}완료{% else %}complete{% endif %}</span>
+    {% endif %}
     {% if has_examples %}
     <a href="{{ url_for('examples_topic', lang=lang, topic_name=topic) }}" class="examples-link">{% if lang == 'ko' %}예제 코드 &rarr;{% else %}Examples &rarr;{% endif %}</a>
     {% endif %}
@@ -25,6 +27,7 @@
 {% endblock %}
 
 {% block content %}
+{% if not auth_enabled or current_user.is_authenticated %}
 <div class="topic-progress-header">
     <div class="progress-bar large">
         <div class="progress-fill" style="width: {{ progress.percentage }}%"></div>
@@ -38,6 +41,7 @@
     <button class="lesson-filter-btn" data-filter="read">{% if lang == 'ko' %}읽음{% else %}Read{% endif %}</button>
     <button class="lesson-filter-btn" data-filter="bookmarked">{% if lang == 'ko' %}북마크{% else %}Bookmarked{% endif %}</button>
 </div>
+{% endif %}
 
 <div class="lessons-list">
     {% for lesson in lessons %}

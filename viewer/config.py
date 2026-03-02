@@ -8,6 +8,7 @@ CONTENT_DIR = _STUDY_HUB / "content"
 EXAMPLES_DIR = _STUDY_HUB / "examples"
 EXERCISES_DIR = _STUDY_HUB / "exercises"
 
+
 class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -17,6 +18,9 @@ class Config:
     EXAMPLES_DIR = EXAMPLES_DIR
     EXERCISES_DIR = EXERCISES_DIR
 
+    # Auth toggle: set AUTH_ENABLED=true to enable multi-user mode
+    AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "false").lower() in ("true", "1", "yes")
+
     # Language settings
     SUPPORTED_LANGUAGES = ["ko", "en"]
     DEFAULT_LANGUAGE = "ko"
@@ -25,14 +29,29 @@ class Config:
         "en": "English",
     }
 
+    # Security (active when AUTH_ENABLED=true, harmless when false)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    WTF_CSRF_ENABLED = True
+    BCRYPT_LOG_ROUNDS = 12
+    REMEMBER_COOKIE_DURATION = 30 * 24 * 60 * 60  # 30 days in seconds
+
+
 class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
+
 
 class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     SECRET_KEY = os.environ.get("SECRET_KEY")
+    SESSION_COOKIE_SECURE = True
+
+    def __init__(self):
+        if self.AUTH_ENABLED and not self.SECRET_KEY:
+            raise RuntimeError("SECRET_KEY environment variable must be set in production with AUTH_ENABLED")
+
 
 config = {
     "development": DevelopmentConfig,

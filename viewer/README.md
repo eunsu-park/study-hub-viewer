@@ -1,8 +1,8 @@
 # Study Viewer (Web Viewer / 웹 뷰어)
 
-A Flask-based Markdown study material viewer.
+A unified Flask-based Markdown study material viewer with optional multi-user authentication.
 
-Flask 기반 Markdown 학습 자료 뷰어입니다.
+Flask 기반 Markdown 학습 자료 뷰어. 선택적 다중 사용자 인증을 지원합니다.
 
 ## Features / 기능
 
@@ -15,80 +15,96 @@ Flask 기반 Markdown 학습 자료 뷰어입니다.
 - Unified top/bottom lesson toolbar (navigation + action buttons) / 레슨 상/하단 통합 툴바 (네비게이션 + 액션 버튼)
 - Keyboard shortcuts (←/→ lesson navigation) / 키보드 단축키 (←/→ 레슨 이동)
 - Scroll-to-top floating button / 맨 위로 스크롤 플로팅 버튼
+- Optional multi-user auth (Flask-Login + bcrypt) / 선택적 다중 사용자 인증
+
+## Auth Modes / 인증 모드
+
+Controlled by `AUTH_ENABLED` environment variable (.env or shell).
+
+`AUTH_ENABLED` 환경변수로 전환합니다.
+
+| Mode | AUTH_ENABLED | Login UI | Progress/Bookmarks |
+|------|-------------|----------|-------------------|
+| Single-user (default) | `false` | Hidden | Always available (user_id=NULL) |
+| Multi-user | `true` | Shown | Login required (per-user data) |
 
 ## Installation & Running / 설치 및 실행
 
+### Single-user mode (default) / 단일 사용자 모드
+
 ```bash
 cd viewer
-
-# Install dependencies / 의존성 설치
 pip install -r requirements.txt
 
-# Initialize database / 데이터베이스 초기화
-flask --app app init-db
-
-# Build search index / 검색 인덱스 빌드
-python build_index.py
-
-# Run server (default port: 5000) / 서버 실행 (기본 포트: 5000)
-flask run
-
-# Change port / 포트 변경
-flask run --port 5050
-
-# Debug mode / 디버그 모드
-flask run --debug --port 5050
+flask init-db          # Initialize database
+flask build-index      # Build search index
+flask run --port 5050  # http://127.0.0.1:5050
 ```
 
-Access http://127.0.0.1:5050 in your browser
+### Multi-user mode / 다중 사용자 모드
 
-브라우저에서 http://127.0.0.1:5050 접속
-
-## Port Configuration / 포트 설정
-
-### Method 1: Command Line Option / 방법 1: 명령줄 옵션
 ```bash
-flask run --port 5050
+cd viewer
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env: AUTH_ENABLED=true, set SECRET_KEY
+
+AUTH_ENABLED=true flask init-db
+AUTH_ENABLED=true flask build-index
+AUTH_ENABLED=true flask create-user --username admin
+AUTH_ENABLED=true flask run --port 5050
 ```
 
-### Method 2: Environment Variable / 방법 2: 환경 변수
+### Production (Gunicorn) / 프로덕션
+
 ```bash
-export FLASK_RUN_PORT=5050
-flask run
+cp .env.example .env
+# Edit .env: AUTH_ENABLED=true, SECRET_KEY=<random>, FLASK_ENV=production
+
+gunicorn -c gunicorn.conf.py app:app
 ```
 
-### Method 3: .flaskenv File / 방법 3: .flaskenv 파일
+### DB Migration / DB 마이그레이션
+
+Existing single-user databases can be migrated to the unified schema:
+
+기존 단일 사용자 DB를 통합 스키마로 마이그레이션:
+
 ```bash
-# Create viewer/.flaskenv / viewer/.flaskenv 생성
-echo "FLASK_RUN_PORT=5050" > .flaskenv
-flask run
+python migrate_db.py
 ```
 
 ## Project Structure / 프로젝트 구조
 
 ```
 viewer/
-├── app.py              # Flask main app / Flask 메인 앱
-├── config.py           # Configuration / 설정
-├── models.py           # SQLAlchemy models / SQLAlchemy 모델
-├── build_index.py      # Search index builder / 검색 인덱스 빌드
-├── requirements.txt    # Dependencies / 의존성
-├── data.db             # SQLite DB (auto-generated / 자동 생성)
-├── templates/          # Jinja2 templates / Jinja2 템플릿
+├── app.py              # Flask main app (AUTH_ENABLED toggle)
+├── auth.py             # Auth Blueprint (login/logout, CLI commands)
+├── config.py           # Configuration + security settings
+├── models.py           # User, LessonRead, Bookmark (user_id nullable)
+├── forms.py            # WTForms (LoginForm)
+├── progress.py         # Batch query helpers (N+1 optimized)
+├── build_index.py      # Search index builder
+├── migrate_db.py       # DB migration script
+├── gunicorn.conf.py    # Gunicorn production config
+├── requirements.txt    # Dependencies
+├── .env.example        # Environment variable template
+├── data.db             # SQLite DB (auto-generated)
+├── templates/
 │   ├── base.html
 │   ├── index.html
 │   ├── topic.html
 │   ├── lesson.html
 │   ├── search.html
 │   ├── dashboard.html
-│   └── bookmarks.html
-├── static/             # Static files / 정적 파일
-│   ├── css/
-│   └── js/
-└── utils/              # Utilities / 유틸리티
-    ├── markdown_parser.py
-    └── search.py
+│   ├── bookmarks.html
+│   └── auth/login.html
+└── static/
+    ├── css/
+    └── js/
 ```
+
+Shared utilities are in `../shared/utils/` (markdown_parser, search, examples, exercises).
 
 ## API Endpoints / API 엔드포인트
 
@@ -103,9 +119,15 @@ viewer/
 | POST | `/api/mark-read` | Mark as read / 읽음 표시 |
 | POST | `/api/bookmark` | Toggle bookmark / 북마크 토글 |
 
+> When `AUTH_ENABLED=true`, POST endpoints require authentication and `X-CSRFToken` header.
+
 ## Dependencies / 의존성
 
 - Flask 3.x
 - Flask-SQLAlchemy
+- Flask-Login (multi-user mode)
+- Flask-WTF (multi-user mode)
+- bcrypt (multi-user mode)
 - Markdown + Pygments
-- python-frontmatter
+- PyYAML
+- Gunicorn (production)

@@ -27,6 +27,7 @@
         {% endif %}
     </div>
     <div class="toolbar-actions">
+        {% if not auth_enabled or current_user.is_authenticated %}
         <button class="btn btn-read {% if is_read %}active{% endif %}" data-action="mark-read" title="Mark as read" aria-pressed="{{ 'true' if is_read else 'false' }}">
             <span class="icon"><span class="icon-check">{{ icon('check', 16) }}</span><span class="icon-circle">{{ icon('circle', 16) }}</span></span>
             <span class="text">{% if is_read %}Read{% else %}Mark as read{% endif %}</span>
@@ -35,6 +36,7 @@
             <span class="icon">{{ icon('bookmark', 16) }}</span>
             <span class="text">{% if is_bookmarked %}Bookmarked{% else %}Bookmark{% endif %}</span>
         </button>
+        {% endif %}
         <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
             <span class="icon">{{ icon('link', 16) }}</span>
             <span class="text">Copy link</span>

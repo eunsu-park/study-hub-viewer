@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const response = await fetch('/api/clear-user-data', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         });
 
         if (response.ok) {

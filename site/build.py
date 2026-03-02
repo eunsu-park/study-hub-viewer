@@ -22,6 +22,8 @@ from pathlib import Path
 # Ensure the site package is importable by adding site/ dir to path
 _site_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(_site_dir))
+# Add project root for shared/ package
+sys.path.insert(0, str(_site_dir.parent))
 
 from config import BuildConfig
 from builders.assets import AssetBuilder

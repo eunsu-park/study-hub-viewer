@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove via API
             const response = await fetch('/api/bookmark', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ lang, topic, filename })
             });
 
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Re-add bookmark via API
             await fetch('/api/bookmark', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ lang, topic, filename })
             });
             // Restore item visibility

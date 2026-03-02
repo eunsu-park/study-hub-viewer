@@ -1,8 +1,30 @@
-"""Database models for progress tracking and bookmarks with multi-language support."""
-from datetime import datetime
+"""Database models for progress tracking and bookmarks."""
+from datetime import datetime, timezone
+
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+class User(UserMixin, db.Model):
+    """Registered user (only used when AUTH_ENABLED=true)."""
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    password_hash = db.Column(db.String(128), nullable=False)
+    display_name = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+
+    reads = db.relationship("LessonRead", backref="user", lazy="dynamic")
+    bookmarks = db.relationship("Bookmark", backref="user", lazy="dynamic")
+
+    def __repr__(self):
+        return f"<User {self.username}>"
 
 
 class LessonRead(db.Model):
@@ -10,17 +32,18 @@ class LessonRead(db.Model):
     __tablename__ = "lessons_read"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     language = db.Column(db.String(10), nullable=False, default="ko")
     topic = db.Column(db.String(100), nullable=False)
     filename = db.Column(db.String(200), nullable=False)
-    read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
-        db.UniqueConstraint("language", "topic", "filename", name="unique_lesson"),
+        db.UniqueConstraint("user_id", "language", "topic", "filename", name="unique_user_lesson"),
     )
 
     def __repr__(self):
-        return f"<LessonRead {self.language}/{self.topic}/{self.filename}>"
+        return f"<LessonRead user={self.user_id} {self.language}/{self.topic}/{self.filename}>"
 
 
 class Bookmark(db.Model):
@@ -28,14 +51,15 @@ class Bookmark(db.Model):
     __tablename__ = "bookmarks"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     language = db.Column(db.String(10), nullable=False, default="ko")
     topic = db.Column(db.String(100), nullable=False)
     filename = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
-        db.UniqueConstraint("language", "topic", "filename", name="unique_bookmark"),
+        db.UniqueConstraint("user_id", "language", "topic", "filename", name="unique_user_bookmark"),
     )
 
     def __repr__(self):
-        return f"<Bookmark {self.language}/{self.topic}/{self.filename}>"
+        return f"<Bookmark user={self.user_id} {self.language}/{self.topic}/{self.filename}>"
