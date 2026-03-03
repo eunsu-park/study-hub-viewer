@@ -149,6 +149,34 @@ def get_learning_paths(content_dir: Path, lang: str) -> list[dict]:
     return paths
 
 
+def get_dependency_graph(content_dir: Path, lang: str) -> dict:
+    """Build nodes/links for D3.js dependency graph."""
+    meta = load_topic_metadata(content_dir)
+    tiers = {t["id"]: t for t in meta.get("tiers", [])}
+    all_topics = get_topics(content_dir, lang)
+    topic_set = {t["name"] for t in all_topics}
+
+    nodes = []
+    links = []
+    for topic in all_topics:
+        name = topic["name"]
+        topic_meta = meta.get("topics", {}).get(name, {})
+        tier_id = topic_meta.get("tier", "beginner")
+        tier = tiers.get(tier_id, {})
+        nodes.append({
+            "id": name,
+            "label": topic["display_name"],
+            "tier": tier_id,
+            "color": tier.get("color", "#6c757d"),
+            "lessons": topic["lesson_count"],
+        })
+        for prereq in topic_meta.get("prerequisites", []):
+            if prereq in topic_set:
+                links.append({"source": prereq, "target": name})
+
+    return {"nodes": nodes, "links": links}
+
+
 def get_example_topics(examples_dir: Path) -> list[str]:
     """Return sorted list of topic names that have example files."""
     if not examples_dir.is_dir():

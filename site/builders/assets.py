@@ -9,7 +9,8 @@ from config import BuildConfig
 class AssetBuilder:
     def __init__(self, config: BuildConfig):
         self.config = config
-        self.viewer_static = config.content_dir.parent / "viewer" / "static"
+        # Locate viewer static relative to this file (site/builders/ -> viewer/static)
+        self.viewer_static = Path(__file__).resolve().parent.parent.parent / "viewer" / "static"
 
     def build(self):
         self._copy_css()
@@ -37,6 +38,11 @@ class AssetBuilder:
         # Write search.js
         search_js = self._get_search_js()
         (js_out / "search.js").write_text(search_js, encoding="utf-8")
+
+        # Copy graph.js from viewer
+        graph_src = self.viewer_static / "js" / "graph.js"
+        if graph_src.exists():
+            shutil.copy2(graph_src, js_out / "graph.js")
 
     def _vendor_lunr(self):
         """Write a bundled lunr.min.js. We embed it directly to avoid CDN dependency."""

@@ -816,6 +816,73 @@ a:hover {
 }
 
 /* ===========================================
+   Topic Dependency Graph
+   =========================================== */
+
+.graph-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--header-height) - var(--spacing-xl) * 2);
+    min-height: 500px;
+}
+
+.graph-container {
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.graph-legend {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.graph-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.graph-legend__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.graph-node text {
+    fill: var(--text-primary);
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.graph-link {
+    stroke: var(--border-color);
+    stroke-opacity: 0.6;
+}
+
+.graph-node.dimmed {
+    opacity: 0.1;
+    transition: opacity 0.2s;
+}
+
+.graph-link.dimmed {
+    opacity: 0.05;
+    transition: opacity 0.2s;
+}
+
+.graph-node.highlighted circle {
+    stroke: var(--text-primary);
+    stroke-width: 3px;
+}
+
+/* ===========================================
    Lessons List (Topic Page)
    =========================================== */
 

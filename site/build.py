@@ -31,6 +31,7 @@ from builders.content import ContentBuilder
 from builders.index import IndexBuilder
 from builders.examples import ExampleBuilder
 from builders.paths import PathsBuilder
+from builders.graph import GraphBuilder
 from builders.search import SearchBuilder
 
 LUNR_CDN_URL = "https://unpkg.com/lunr@2.3.9/lunr.min.js"
@@ -105,28 +106,32 @@ def main():
     start = time.time()
 
     # Phase 1: Static assets
-    print("[1/6] Copying static assets...")
+    print("[1/7] Copying static assets...")
     AssetBuilder(config).build()
     download_lunr(config.output_dir)
 
     # Phase 2: Render lesson pages
-    print("[2/6] Building lesson pages...")
+    print("[2/7] Building lesson pages...")
     ContentBuilder(config).build()
 
     # Phase 3: Generate index/topic pages
-    print("[3/6] Building index pages...")
+    print("[3/7] Building index pages...")
     IndexBuilder(config).build()
 
     # Phase 4: Generate example viewer pages
-    print("[4/6] Building example pages...")
+    print("[4/7] Building example pages...")
     ExampleBuilder(config).build()
 
     # Phase 5: Generate learning path pages
-    print("[5/6] Building learning path pages...")
+    print("[5/7] Building learning path pages...")
     PathsBuilder(config).build()
 
-    # Phase 6: Build search index
-    print("[6/6] Building search index...")
+    # Phase 6: Generate dependency graph page
+    print("[6/7] Building graph page...")
+    GraphBuilder(config).build()
+
+    # Phase 7: Build search index
+    print("[7/7] Building search index...")
     SearchBuilder(config).build()
 
     # Create .nojekyll marker (harmless even inside Jekyll site)

@@ -191,6 +191,34 @@ def get_learning_paths(lang: str) -> list[dict]:
     return paths
 
 
+def get_dependency_graph(lang: str) -> dict:
+    """Build nodes/links for D3.js dependency graph."""
+    meta = load_topic_metadata()
+    tiers = {t["id"]: t for t in meta.get("tiers", [])}
+    all_topics = get_topics(lang)
+    topic_set = {t["name"] for t in all_topics}
+
+    nodes = []
+    links = []
+    for topic in all_topics:
+        name = topic["name"]
+        topic_meta = meta.get("topics", {}).get(name, {})
+        tier_id = topic_meta.get("tier", "beginner")
+        tier = tiers.get(tier_id, {})
+        nodes.append({
+            "id": name,
+            "label": topic["display_name"],
+            "tier": tier_id,
+            "color": tier.get("color", "#6c757d"),
+            "lessons": topic["lesson_count"],
+        })
+        for prereq in topic_meta.get("prerequisites", []):
+            if prereq in topic_set:
+                links.append({"source": prereq, "target": name})
+
+    return {"nodes": nodes, "links": links}
+
+
 def get_tier_for_topic(topic_name: str) -> dict | None:
     """Get tier info for a single topic."""
     meta = load_topic_metadata()
@@ -640,6 +668,23 @@ def path_detail(lang: str, path_id: str):
         path=path,
         path_topics=path_topics,
         progress=path_progress,
+        lang=lang,
+        languages=get_available_languages(),
+    )
+
+
+# Dependency Graph Route
+@app.route("/<lang>/graph")
+@validate_lang
+def dependency_graph(lang: str):
+    """Topic dependency graph visualization."""
+    graph_data = get_dependency_graph(lang)
+    meta = load_topic_metadata()
+    tiers = meta.get("tiers", [])
+    return render_template(
+        "graph.html",
+        graph_data=graph_data,
+        tiers=tiers,
         lang=lang,
         languages=get_available_languages(),
     )
