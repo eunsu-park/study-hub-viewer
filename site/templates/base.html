@@ -42,6 +42,10 @@
                     <span class="nav-icon">🏠</span>
                     <span class="nav-text">Home</span>
                 </a>
+                <a href="{{ base_url }}/{{ lang }}/paths/" class="nav-item {% if page_type == 'paths' %}active{% endif %}">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Paths</span>
+                </a>
                 <a href="{{ base_url }}/examples/" class="nav-item {% if page_type == 'examples' %}active{% endif %}">
                     <span class="nav-icon">💻</span>
                     <span class="nav-text">Examples</span>

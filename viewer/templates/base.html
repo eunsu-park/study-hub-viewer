@@ -58,6 +58,10 @@
                     <span class="nav-icon">{{ icon('bookmark', 18) }}</span>
                     <span class="nav-text">Bookmarks</span>
                 </a>
+                <a href="{{ url_for('paths_index', lang=lang) }}" class="nav-item {% if request.endpoint in ('paths_index', 'path_detail') %}active{% endif %}">
+                    <span class="nav-icon">{{ icon('path', 18) }}</span>
+                    <span class="nav-text">Paths</span>
+                </a>
                 <a href="{{ url_for('examples_index', lang=lang) }}" class="nav-item {% if request.endpoint in ('examples_index', 'examples_topic', 'example_view') %}active{% endif %}">
                     <span class="nav-icon">{{ icon('code', 18) }}</span>
                     <span class="nav-text">Examples</span>

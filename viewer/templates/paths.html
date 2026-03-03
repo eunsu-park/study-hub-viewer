@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lang == 'ko' %}학습 경로{% else %}Learning Paths{% endif %} - Study Viewer{% endblock %}
+
+{% block header %}
+<h1>{% if lang == 'ko' %}학습 경로{% else %}Learning Paths{% endif %}</h1>
+<p class="header-subtitle">{% if lang == 'ko' %}토픽 횡단 커리큘럼{% else %}Cross-topic curricula{% endif %}</p>
+{% endblock %}
+
+{% block content %}
+<div class="paths">
+    <div class="paths-grid">
+        {% for path in paths %}
+        <a href="{{ url_for('path_detail', lang=lang, path_id=path.id) }}" class="path-card"
+           style="--path-color: {{ path.color }}">
+            <div class="path-card__header">
+                <span class="path-card__icon">{{ icon(path.icon, 24) }}</span>
+                <h3 class="path-card__title">{{ path.label }}</h3>
+            </div>
+            <p class="path-card__desc">{{ path.description }}</p>
+            <div class="path-card__meta">
+                <span>{{ path.topic_count }} {% if lang == 'ko' %}토픽{% else %}topics{% endif %}</span>
+                <span>{{ path.total_lessons }} {% if lang == 'ko' %}레슨{% else %}lessons{% endif %}</span>
+            </div>
+            {% if not auth_enabled or current_user.is_authenticated %}
+            <div class="path-card__progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ path.progress.percentage }}%"></div>
+                </div>
+                <span class="progress-text">{{ path.progress.percentage }}%</span>
+            </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

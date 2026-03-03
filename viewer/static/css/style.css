@@ -654,6 +654,168 @@ a:hover {
 }
 
 /* ===========================================
+   Learning Paths
+   =========================================== */
+
+.paths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.path-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-fast);
+    display: block;
+    color: var(--text-primary);
+    border-left: 4px solid var(--path-color, var(--accent-color));
+}
+
+.path-card:hover {
+    border-color: var(--path-color);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    color: var(--text-primary);
+}
+
+.path-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.path-card__icon {
+    color: var(--path-color);
+    flex-shrink: 0;
+}
+
+.path-card__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0;
+}
+
+.path-card__desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.4;
+}
+
+.path-card__meta {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-md);
+}
+
+.path-card__progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.path-card__progress .progress-bar {
+    flex: 1;
+}
+
+.path-card__progress .progress-text {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    min-width: 3em;
+    text-align: right;
+}
+
+/* Path Detail Page */
+.path-detail__progress {
+    background: var(--bg-primary);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-xl);
+}
+
+.path-topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.path-topic-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    transition: border-color var(--transition-fast);
+}
+
+.path-topic-item:hover {
+    border-color: var(--accent-color);
+}
+
+.path-topic-item__step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.path-topic-item__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.path-topic-item__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-xs);
+}
+
+.path-topic-item__name {
+    font-weight: 600;
+    font-size: var(--font-size-base);
+}
+
+.path-topic-item__count {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.path-topic-item__desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.path-topic-item__progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.path-topic-item__progress .progress-bar {
+    flex: 1;
+    max-width: 200px;
+}
+
+/* ===========================================
    Lessons List (Topic Page)
    =========================================== */
 

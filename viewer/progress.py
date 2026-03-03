@@ -42,6 +42,29 @@ def get_batch_progress(lang: str, user_id: int | None, topics: list[dict]) -> di
     return progress
 
 
+def get_path_progress(lang: str, user_id: int | None,
+                      path_topics: list[dict]) -> dict:
+    """Get aggregated progress for a learning path.
+
+    Args:
+        lang: Language code
+        user_id: Current user ID (None in single-user mode)
+        path_topics: List of topic dicts (must have 'name' and 'lesson_count' keys)
+
+    Returns:
+        dict with keys: total, read, percentage, per_topic
+    """
+    per_topic = get_batch_progress(lang, user_id, path_topics)
+    total = sum(p["total"] for p in per_topic.values())
+    read = sum(p["read"] for p in per_topic.values())
+    return {
+        "total": total,
+        "read": read,
+        "percentage": round(read / total * 100) if total > 0 else 0,
+        "per_topic": per_topic,
+    }
+
+
 def get_batch_read_status(lang: str, topic: str, user_id: int | None,
                           filenames: list[str]) -> dict[str, bool]:
     """Get read status for all lessons in a topic in a single query.

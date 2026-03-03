@@ -107,6 +107,48 @@ def get_lessons(content_dir: Path, lang: str, topic: str) -> list[dict]:
     return lessons
 
 
+_learning_paths_cache = None
+
+
+def load_learning_paths(content_dir: Path) -> dict:
+    """Load learning path definitions from learning_paths.yaml."""
+    global _learning_paths_cache
+    if _learning_paths_cache is not None:
+        return _learning_paths_cache
+
+    yaml_path = content_dir / "learning_paths.yaml"
+    if not yaml_path.exists():
+        _learning_paths_cache = {"paths": {}}
+        return _learning_paths_cache
+
+    with open(yaml_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    _learning_paths_cache = data or {"paths": {}}
+    return _learning_paths_cache
+
+
+def get_learning_paths(content_dir: Path, lang: str) -> list[dict]:
+    """Get all learning paths with enriched metadata."""
+    data = load_learning_paths(content_dir)
+    all_topics = get_topics(content_dir, lang)
+    topic_lesson_counts = {t["name"]: t["lesson_count"] for t in all_topics}
+
+    paths = []
+    for path_id, path_def in data.get("paths", {}).items():
+        valid_topics = [t for t in path_def.get("topics", []) if t in topic_lesson_counts]
+        paths.append({
+            "id": path_id,
+            "label": path_def.get("label", {}).get(lang, path_id),
+            "description": path_def.get("description", {}).get(lang, ""),
+            "icon": path_def.get("icon", "list"),
+            "color": path_def.get("color", "#6c757d"),
+            "topics": valid_topics,
+            "topic_count": len(valid_topics),
+            "total_lessons": sum(topic_lesson_counts.get(t, 0) for t in valid_topics),
+        })
+    return paths
+
+
 def get_example_topics(examples_dir: Path) -> list[str]:
     """Return sorted list of topic names that have example files."""
     if not examples_dir.is_dir():

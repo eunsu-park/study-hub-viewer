@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ path.label }} - Study Viewer{% endblock %}
+
+{% block header %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('paths_index', lang=lang) }}">{% if lang == 'ko' %}학습 경로{% else %}Learning Paths{% endif %}</a>
+    <span class="separator">/</span>
+    <span class="current">{{ path.label }}</span>
+</nav>
+<h1>{{ path.label }}</h1>
+<p class="header-subtitle">{{ path.description }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="path-detail">
+    {% if not auth_enabled or current_user.is_authenticated %}
+    <!-- Path Overall Progress -->
+    <section class="path-detail__progress">
+        <div class="overall-stats">
+            <div class="stat-card highlight">
+                <span class="stat-value">{{ progress.percentage }}%</span>
+                <span class="stat-label">{% if lang == 'ko' %}완료{% else %}Complete{% endif %}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">{{ progress.read }}/{{ progress.total }}</span>
+                <span class="stat-label">{% if lang == 'ko' %}읽은 레슨{% else %}Lessons Read{% endif %}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value">{{ path.topic_count }}</span>
+                <span class="stat-label">{% if lang == 'ko' %}토픽{% else %}Topics{% endif %}</span>
+            </div>
+        </div>
+        <div class="progress-bar xlarge">
+            <div class="progress-fill" style="width: {{ progress.percentage }}%"></div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Topic List (ordered as curriculum) -->
+    <section class="path-detail__topics">
+        <h2>{% if lang == 'ko' %}커리큘럼{% else %}Curriculum{% endif %} ({{ path_topics|length }} {% if lang == 'ko' %}토픽{% else %}topics{% endif %})</h2>
+        <div class="path-topics-list">
+            {% for topic in path_topics %}
+            <div class="path-topic-item">
+                <span class="path-topic-item__step">{{ loop.index }}</span>
+                <div class="path-topic-item__body">
+                    <div class="path-topic-item__header">
+                        <a href="{{ url_for('topic', lang=lang, name=topic.name) }}" class="path-topic-item__name">
+                            {{ topic.display_name }}
+                        </a>
+                        {% if topic.tier %}
+                        <span class="tier-badge tier-{{ topic.tier.id }}" style="--tier-color: {{ topic.tier.color }}">{{ topic.tier.label[lang] }}</span>
+                        {% endif %}
+                        <span class="path-topic-item__count">{{ topic.lesson_count }} {% if lang == 'ko' %}레슨{% else %}lessons{% endif %}</span>
+                    </div>
+                    {% if topic.description %}
+                    <p class="path-topic-item__desc">{{ topic.description }}</p>
+                    {% endif %}
+                    {% if not auth_enabled or current_user.is_authenticated %}
+                    <div class="path-topic-item__progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill {% if topic.progress.percentage == 100 %}complete{% endif %}"
+                                 style="width: {{ topic.progress.percentage }}%"></div>
+                        </div>
+                        <span class="progress-percentage">{{ topic.progress.percentage }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

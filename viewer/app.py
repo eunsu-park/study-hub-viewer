@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import db, User, LessonRead, Bookmark
 from config import Config
-from progress import get_batch_progress, get_batch_read_status, get_batch_bookmark_status
+from progress import get_batch_progress, get_batch_read_status, get_batch_bookmark_status, get_path_progress
 from shared.utils.markdown_parser import parse_markdown, parse_markdown_cached, extract_excerpt, estimate_reading_time
 from shared.utils.search import search, build_search_index, build_example_index, build_exercise_index, create_fts_table
 from shared.utils.examples import get_example_topics, get_example_files, highlight_file
@@ -147,6 +147,48 @@ def load_topic_metadata() -> dict:
         data = yaml.safe_load(f)
     _topic_metadata_cache = data or {"tiers": [], "topics": {}}
     return _topic_metadata_cache
+
+
+_learning_paths_cache = None
+
+
+def load_learning_paths() -> dict:
+    """Load learning path definitions from learning_paths.yaml."""
+    global _learning_paths_cache
+    if _learning_paths_cache is not None:
+        return _learning_paths_cache
+
+    yaml_path = CONTENT_DIR / "learning_paths.yaml"
+    if not yaml_path.exists():
+        _learning_paths_cache = {"paths": {}}
+        return _learning_paths_cache
+
+    with open(yaml_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    _learning_paths_cache = data or {"paths": {}}
+    return _learning_paths_cache
+
+
+def get_learning_paths(lang: str) -> list[dict]:
+    """Get all learning paths with topic counts and metadata."""
+    data = load_learning_paths()
+    all_topics = get_topics(lang)
+    topic_lesson_counts = {t["name"]: t["lesson_count"] for t in all_topics}
+
+    paths = []
+    for path_id, path_def in data.get("paths", {}).items():
+        valid_topics = [t for t in path_def.get("topics", []) if t in topic_lesson_counts]
+        paths.append({
+            "id": path_id,
+            "label": path_def.get("label", {}).get(lang, path_id),
+            "description": path_def.get("description", {}).get(lang, ""),
+            "icon": path_def.get("icon", "list"),
+            "color": path_def.get("color", "#6c757d"),
+            "topics": valid_topics,
+            "topic_count": len(valid_topics),
+            "total_lessons": sum(topic_lesson_counts.get(t, 0) for t in valid_topics),
+        })
+    return paths
 
 
 def get_tier_for_topic(topic_name: str) -> dict | None:
@@ -537,6 +579,67 @@ def bookmarks(lang: str):
     return render_template(
         "bookmarks.html",
         bookmarks=items,
+        lang=lang,
+        languages=get_available_languages(),
+    )
+
+
+# Learning Paths Routes
+@app.route("/<lang>/paths")
+@validate_lang
+def paths_index(lang: str):
+    """Learning Paths index - list all curated learning paths."""
+    paths = get_learning_paths(lang)
+    user_id = _get_user_id()
+    all_topics = get_topics(lang)
+    topic_map = {t["name"]: t for t in all_topics}
+
+    for path in paths:
+        topic_dicts = [topic_map[t] for t in path["topics"] if t in topic_map]
+        path["progress"] = get_path_progress(lang, user_id, topic_dicts)
+
+    return render_template(
+        "paths.html",
+        paths=paths,
+        lang=lang,
+        languages=get_available_languages(),
+    )
+
+
+@app.route("/<lang>/paths/<path_id>")
+@validate_lang
+def path_detail(lang: str, path_id: str):
+    """Single learning path - show topics with progress."""
+    paths = get_learning_paths(lang)
+    path = next((p for p in paths if p["id"] == path_id), None)
+    if not path:
+        abort(404)
+
+    user_id = _get_user_id()
+    all_topics = get_topics(lang)
+    topic_map = {t["name"]: t for t in all_topics}
+    meta = load_topic_metadata()
+
+    path_topics = []
+    for topic_name in path["topics"]:
+        if topic_name in topic_map:
+            topic = dict(topic_map[topic_name])
+            topic["tier"] = get_tier_for_topic(topic_name)
+            topic_meta = meta.get("topics", {}).get(topic_name, {})
+            topic["description"] = topic_meta.get("description", {}).get(lang, "")
+            path_topics.append(topic)
+
+    path_progress = get_path_progress(lang, user_id, path_topics)
+    for topic in path_topics:
+        topic["progress"] = path_progress["per_topic"].get(
+            topic["name"], {"total": 0, "read": 0, "percentage": 0}
+        )
+
+    return render_template(
+        "path_detail.html",
+        path=path,
+        path_topics=path_topics,
+        progress=path_progress,
         lang=lang,
         languages=get_available_languages(),
     )
