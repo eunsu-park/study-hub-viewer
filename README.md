@@ -135,7 +135,6 @@ study_hub_viewer/
 │
 ├── .gitignore
 ├── LICENSE
-├── CLAUDE.md
 └── README.md
 ```
 
