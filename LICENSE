@@ -1,16 +1,4 @@
-# Dual License / 이중 라이센스
-
-This project uses a dual license structure.
-이 프로젝트는 이중 라이센스 구조를 사용합니다.
-
----
-
-## Code: MIT License
-## 코드: MIT 라이센스
-
-**Applies to / 적용 대상**: `examples/`, `viewer/`
-
-MIT License
+# MIT License
 
 Copyright (c) 2026
 
@@ -34,24 +22,10 @@ SOFTWARE.
 
 ---
 
-## Study Materials: CC BY-NC 4.0
-## 학습 자료: CC BY-NC 4.0
+## Tools & Acknowledgments / 도구 및 감사
 
-**Applies to / 적용 대상**: `content/`
+AI language models were used as a development tool during the creation of this
+repository. All content was reviewed and curated by the author.
 
-The study materials in the `content/` directory are licensed under the
-Creative Commons Attribution-NonCommercial 4.0 International License.
-
-`content/` 디렉토리의 학습 자료는 크리에이티브 커먼즈 저작자표시-비영리 4.0
-국제 라이센스에 따라 이용할 수 있습니다.
-
-See LICENSE-CC-BY-NC-4.0 for full license text, or visit:
-전체 라이센스 내용은 LICENSE-CC-BY-NC-4.0 파일을 참조하거나 아래 링크를 방문하세요:
-https://creativecommons.org/licenses/by-nc/4.0/
-
----
-
-## AI Assistance Disclosure / AI 도움 명시
-
-Some content in this repository was created with the assistance of AI (Claude).
-이 저장소의 일부 콘텐츠는 AI(Claude)의 도움을 받아 작성되었습니다.
+이 저장소의 제작 과정에서 AI 언어 모델을 개발 도구로 활용했습니다.
+모든 콘텐츠는 저자가 검토하고 큐레이션했습니다.
