@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lang == 'ko' %}개념 색인{% else %}Concept Index{% endif %} - Study Viewer{% endblock %}
+
+{% block header %}
+<h1>{% if lang == 'ko' %}개념 색인{% else %}Concept Index{% endif %}</h1>
+<p class="header-subtitle">
+    {{ total_concepts }}
+    {% if lang == 'ko' %}개 개념{% else %}concept{{ 's' if total_concepts != 1 else '' }}{% endif %}
+    {% if q %} matching "{{ q }}"{% endif %}
+    {% if topic_filter %} in {{ topic_filter.replace('_', ' ') }}{% endif %}
+</p>
+{% endblock %}
+
+{% block content %}
+<div class="concepts-page">
+    <form action="{{ url_for('concept_index', lang=lang) }}" method="get" class="search-form concepts-filter">
+        <div class="search-input-row">
+            <label for="concept-search" class="sr-only">{% if lang == 'ko' %}개념 검색{% else %}Search concepts{% endif %}</label>
+            <input type="search" id="concept-search" name="q" value="{{ q }}"
+                   placeholder="{% if lang == 'ko' %}개념 검색...{% else %}Search concepts...{% endif %}"
+                   autofocus>
+            <button type="submit">{% if lang == 'ko' %}검색{% else %}Search{% endif %}</button>
+        </div>
+        <div class="search-filters">
+            <select name="topic" class="search-filter-select" aria-label="{% if lang == 'ko' %}토픽 필터{% else %}Filter by topic{% endif %}">
+                <option value="">{% if lang == 'ko' %}모든 토픽{% else %}All topics{% endif %}</option>
+                {% for t in topics %}
+                <option value="{{ t.name }}" {% if topic_filter == t.name %}selected{% endif %}>
+                    {{ t.display_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    {% if available_letters %}
+    <nav class="concept-letter-nav" aria-label="{% if lang == 'ko' %}알파벳 이동{% else %}Jump to letter{% endif %}">
+        {% for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ#" %}
+        {% if letter in available_letters %}
+        <a href="#letter-{{ letter }}" class="concept-letter-nav__item concept-letter-nav__item--active">{{ letter }}</a>
+        {% else %}
+        <span class="concept-letter-nav__item concept-letter-nav__item--disabled">{{ letter }}</span>
+        {% endif %}
+        {% endfor %}
+    </nav>
+
+    <div class="concept-groups">
+        {% for letter in available_letters %}
+        <section class="concept-group" id="letter-{{ letter }}">
+            <h2 class="concept-group__heading">{{ letter }}</h2>
+            <div class="concept-list">
+                {% for concept in letter_groups[letter] %}
+                <div class="concept-card">
+                    <div class="concept-card__header">
+                        <span class="concept-card__term">{{ concept.term }}</span>
+                        <span class="concept-card__badge">{{ concept.count }}</span>
+                    </div>
+                    <ul class="concept-card__occurrences">
+                        {% for occ in concept.occurrences %}
+                        <li>
+                            <a href="{{ url_for('lesson', lang=lang, name=occ.topic, filename=occ.filename) }}"
+                               class="concept-card__link">
+                                <span class="concept-card__topic">{{ occ.topic_display }}</span>
+                                <span class="concept-card__sep">&rsaquo;</span>
+                                <span class="concept-card__lesson">{{ occ.lesson_title }}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="no-results">
+        <p>
+            {% if q or topic_filter %}
+            {% if lang == 'ko' %}검색 결과가 없습니다. 다른 키워드를 시도해 보세요.{% else %}No concepts match your filter. Try different keywords.{% endif %}
+            {% else %}
+            {% if lang == 'ko' %}개념을 찾을 수 없습니다.{% else %}No concepts found.{% endif %}
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

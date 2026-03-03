@@ -191,6 +191,19 @@ def get_learning_paths(lang: str) -> list[dict]:
     return paths
 
 
+from shared.utils.concepts import build_concept_index as _build_concept_index
+
+_concept_index_cache: dict[str, dict] = {}
+
+
+def get_concept_index(lang: str) -> dict:
+    """Return concept index for lang, computing on first call (cached globally)."""
+    global _concept_index_cache
+    if lang not in _concept_index_cache:
+        _concept_index_cache[lang] = _build_concept_index(CONTENT_DIR, lang)
+    return _concept_index_cache[lang]
+
+
 def get_dependency_graph(lang: str) -> dict:
     """Build nodes/links for D3.js dependency graph."""
     meta = load_topic_metadata()
@@ -685,6 +698,60 @@ def dependency_graph(lang: str):
         "graph.html",
         graph_data=graph_data,
         tiers=tiers,
+        lang=lang,
+        languages=get_available_languages(),
+    )
+
+
+# Concept Index Route
+@app.route("/<lang>/concepts")
+@validate_lang
+def concept_index(lang: str):
+    """Concept index — cross-topic concept dictionary."""
+    q = request.args.get("q", "").strip()
+    topic_filter = request.args.get("topic", "").strip()
+    full_index = get_concept_index(lang)
+    q_lower = q.lower()
+
+    # Default view: cross-topic only; with query: search all
+    if q_lower:
+        filtered = {k: v for k, v in full_index.items() if q_lower in k}
+    else:
+        filtered = {k: v for k, v in full_index.items()
+                    if len(set(o["topic"] for o in v["occurrences"])) >= 2}
+
+    # Topic filter
+    if topic_filter:
+        narrowed = {}
+        for k, v in filtered.items():
+            matching = [o for o in v["occurrences"] if o["topic"] == topic_filter]
+            if matching:
+                narrowed[k] = {"term": v["term"], "occurrences": matching}
+        filtered = narrowed
+
+    # Alphabetical grouping
+    letter_groups: dict[str, list] = {}
+    for key, entry in filtered.items():
+        first = entry["term"][0].upper() if entry["term"] else "#"
+        if not first.isalpha():
+            first = "#"
+        letter_groups.setdefault(first, []).append({
+            "key": key,
+            "term": entry["term"],
+            "count": len(entry["occurrences"]),
+            "occurrences": entry["occurrences"],
+        })
+    for letter in letter_groups:
+        letter_groups[letter].sort(key=lambda x: x["term"].lower())
+
+    return render_template(
+        "concepts.html",
+        letter_groups=letter_groups,
+        available_letters=sorted(letter_groups.keys()),
+        topics=get_topics(lang),
+        q=q,
+        topic_filter=topic_filter,
+        total_concepts=len(filtered),
         lang=lang,
         languages=get_available_languages(),
     )

@@ -883,6 +883,153 @@ a:hover {
 }
 
 /* ===========================================
+   Concept Index
+   =========================================== */
+
+.concepts-page {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+}
+
+.concepts-filter {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Letter Navigation Bar */
+.concept-letter-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.concept-letter-nav__item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.concept-letter-nav__item--active {
+    color: var(--accent-color);
+    background: var(--bg-primary);
+    border: 1px solid var(--accent-color);
+}
+
+.concept-letter-nav__item--active:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.concept-letter-nav__item--disabled {
+    color: var(--text-muted);
+}
+
+/* Letter Group + Concept Cards */
+.concept-group {
+    margin-bottom: var(--spacing-xl);
+}
+
+.concept-group__heading {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--accent-color);
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+.concept-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.concept-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    transition: border-color 0.15s;
+}
+
+.concept-card:hover {
+    border-color: var(--accent-color);
+}
+
+.concept-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.concept-card__term {
+    font-weight: 600;
+}
+
+.concept-card__badge {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--accent-color);
+    color: white;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.concept-card__occurrences {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.concept-card__link {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.concept-card__link:hover {
+    color: var(--accent-color);
+}
+
+.concept-card__topic {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.concept-card__sep {
+    color: var(--text-muted);
+}
+
+.concept-card__lesson {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===========================================
    Lessons List (Topic Page)
    =========================================== */
 

@@ -66,6 +66,10 @@
                     <span class="nav-icon">{{ icon('graph', 18) }}</span>
                     <span class="nav-text">Graph</span>
                 </a>
+                <a href="{{ url_for('concept_index', lang=lang) }}" class="nav-item {% if request.endpoint == 'concept_index' %}active{% endif %}">
+                    <span class="nav-icon">{{ icon('book', 18) }}</span>
+                    <span class="nav-text">Concepts</span>
+                </a>
                 <a href="{{ url_for('examples_index', lang=lang) }}" class="nav-item {% if request.endpoint in ('examples_index', 'examples_topic', 'example_view') %}active{% endif %}">
                     <span class="nav-icon">{{ icon('code', 18) }}</span>
                     <span class="nav-text">Examples</span>

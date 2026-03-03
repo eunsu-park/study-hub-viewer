@@ -9,7 +9,7 @@ A collection of viewer and site generation tools for [Study Hub](https://github.
 | Tool | Description | Port |
 |------|-------------|------|
 | **viewer/** | Unified Flask web viewer (single/multi-user) / 통합 Flask 웹 뷰어 | 5050 |
-| **site/** | Static site generator (GitHub Pages) / 정적 사이트 생성기 | — |
+| **site/** | Static site generator (GitHub Pages) / 정적 사이트 생성기 — **Legacy** | — |
 
 ## Prerequisites / 사전 요구사항
 
@@ -83,7 +83,10 @@ gunicorn -c gunicorn.conf.py app:app
 
 ---
 
-## Site Generator (Static Site / 정적 사이트)
+## Site Generator (Static Site / 정적 사이트) — Legacy
+
+> **Legacy**: No longer updated. New features are added to viewer/ only.
+> **레거시**: 향후 업데이트 제외. 새 기능은 viewer/에만 추가.
 
 Static HTML site generation for GitHub Pages hosting.
 
@@ -126,7 +129,7 @@ study_hub_viewer/
 │   ├── templates/
 │   └── static/
 │
-├── site/                   # Static site generator
+├── site/                   # Static site generator (legacy)
 │   ├── build.py
 │   ├── config.py
 │   ├── builders/
