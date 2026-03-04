@@ -1,15 +1,8 @@
 # Study Hub Viewer
 
-A collection of viewer and site generation tools for [Study Hub](https://github.com/eunsu-park/study-hub): a unified Flask viewer with optional authentication and progress tracking, and a static site generator for GitHub Pages.
+A Flask-based web viewer for [Study Hub](https://github.com/eunsu-park/study-hub) with optional multi-user authentication, progress tracking, and full-text search.
 
-[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 뷰어/사이트 생성 도구 모음. 통합 Flask 뷰어(선택적 인증, 진행률 추적, 검색)와 정적 사이트 생성기(GitHub Pages)를 포함합니다.
-
-## Tools / 도구
-
-| Tool | Description | Port |
-|------|-------------|------|
-| **viewer/** | Unified Flask web viewer (single/multi-user) / 통합 Flask 웹 뷰어 | 5050 |
-| **site/** | Static site generator (GitHub Pages) / 정적 사이트 생성기 — **Legacy** | — |
+[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 Flask 기반 웹 뷰어. 선택적 다중 사용자 인증, 진행률 추적, 전체 텍스트 검색을 지원합니다.
 
 ## Prerequisites / 사전 요구사항
 
@@ -40,11 +33,7 @@ echo 'STUDY_HUB_PATH=~/repos/study-hub' >> .env
 
 ---
 
-## Viewer (Unified / 통합 뷰어)
-
-Single-user or multi-user mode, controlled by `AUTH_ENABLED` environment variable.
-
-단일/다중 사용자 모드를 `AUTH_ENABLED` 환경변수로 전환합니다.
+## Running / 실행
 
 ### Single-user mode (default) / 단일 사용자 모드 (기본)
 
@@ -83,39 +72,18 @@ gunicorn -c gunicorn.conf.py app:app
 
 ---
 
-## Site Generator (Static Site / 정적 사이트) — Legacy
-
-> **Legacy**: No longer updated. New features are added to viewer/ only.
-> **레거시**: 향후 업데이트 제외. 새 기능은 viewer/에만 추가.
-
-Static HTML site generation for GitHub Pages hosting.
-
-GitHub Pages용 정적 HTML 사이트 생성.
-
-```bash
-cd site
-pip install -r requirements.txt
-python build.py --clean
-# Or specify content directory:
-python build.py --content-dir ~/repos/study-hub --clean
-```
-
-Options: `--output <dir>`, `--base-url <path>`, `--content-dir <path>`, `--clean`
-
----
-
 ## Project Structure / 프로젝트 구조
 
 ```
 study-hub-viewer/
-├── shared/                 # Shared utilities (used by viewer/ and site/)
+├── shared/                 # Shared utilities
 │   └── utils/
 │       ├── markdown_parser.py
 │       ├── search.py
 │       ├── examples.py
 │       └── exercises.py
 │
-├── viewer/                 # Unified Flask viewer (port 5050)
+├── viewer/                 # Flask web viewer (port 5050)
 │   ├── app.py              # Main app (AUTH_ENABLED toggle)
 │   ├── auth.py             # Auth Blueprint (login/logout, CLI)
 │   ├── config.py           # Configuration + security settings
@@ -128,13 +96,6 @@ study-hub-viewer/
 │   ├── .env.example
 │   ├── templates/
 │   └── static/
-│
-├── site/                   # Static site generator (legacy)
-│   ├── build.py
-│   ├── config.py
-│   ├── builders/
-│   ├── templates/
-│   └── utils/
 │
 ├── .gitignore
 ├── LICENSE
