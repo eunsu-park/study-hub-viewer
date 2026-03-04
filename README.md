@@ -19,7 +19,7 @@ This repo references content from the study-hub repository. Clone it first.
 
 ```bash
 git clone https://github.com/eunsu-park/study-hub.git ~/repos/study-hub
-git clone https://github.com/eunsu-park/study-hub_viewer.git ~/repos/study_hub_viewer
+git clone https://github.com/eunsu-park/study-hub-viewer.git ~/repos/study-hub-viewer
 ```
 
 ## Environment Setup / 환경 설정
@@ -107,7 +107,7 @@ Options: `--output <dir>`, `--base-url <path>`, `--content-dir <path>`, `--clean
 ## Project Structure / 프로젝트 구조
 
 ```
-study_hub_viewer/
+study-hub-viewer/
 ├── shared/                 # Shared utilities (used by viewer/ and site/)
 │   └── utils/
 │       ├── markdown_parser.py

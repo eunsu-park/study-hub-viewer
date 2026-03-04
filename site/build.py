@@ -76,7 +76,7 @@ def main():
     parser.add_argument(
         "--content-dir",
         default=None,
-        help="Path to study_hub content root (default: STUDY_HUB_PATH env or ../)",
+        help="Path to study-hub content root (default: STUDY_HUB_PATH env or ../)",
     )
     args = parser.parse_args()
 
