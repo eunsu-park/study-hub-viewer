@@ -12,6 +12,7 @@
         })();
     </script>
     <title>{% block title %}Study Viewer{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="preload" href="{{ url_for('static', filename='fonts/D2Coding.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Pygments syntax highlighting -->
@@ -58,6 +59,10 @@
                 <a href="{{ url_for('bookmarks', lang=lang) }}" class="nav-item {% if request.endpoint == 'bookmarks' %}active{% endif %}">
                     <span class="nav-icon">{{ icon('bookmark', 18) }}</span>
                     <span class="nav-text">Bookmarks</span>
+                </a>
+                <a href="{{ url_for('flashcards', lang=lang) }}" class="nav-item {% if request.endpoint == 'flashcards' %}active{% endif %}">
+                    <span class="nav-icon">{{ icon('flashcard', 18) }}</span>
+                    <span class="nav-text">Flashcards</span>
                 </a>
                 <a href="{{ url_for('paths_index', lang=lang) }}" class="nav-item {% if request.endpoint in ('paths_index', 'path_detail') %}active{% endif %}">
                     <span class="nav-icon">{{ icon('path', 18) }}</span>
