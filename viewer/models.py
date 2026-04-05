@@ -63,3 +63,30 @@ class Bookmark(db.Model):
 
     def __repr__(self):
         return f"<Bookmark user={self.user_id} {self.language}/{self.topic}/{self.filename}>"
+
+
+class ConceptCard(db.Model):
+    """Flashcard for spaced repetition of technical concepts."""
+    __tablename__ = "concept_cards"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    topic = db.Column(db.String(100), nullable=False)
+    filename = db.Column(db.String(200), nullable=True)
+    question = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+
+    # SM-2 state
+    ease_factor = db.Column(db.Float, default=2.5, nullable=False)
+    interval = db.Column(db.Integer, default=0, nullable=False)
+    repetitions = db.Column(db.Integer, default=0, nullable=False)
+    next_review = db.Column(db.DateTime, nullable=True)
+    last_reviewed = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "topic", "question", name="uq_concept_card"),
+    )
+
+    def __repr__(self):
+        return f"<ConceptCard user={self.user_id} {self.topic}: {self.question[:30]}>"
