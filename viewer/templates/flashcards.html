@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "macros/icons.html" import icon %}
+
+{% block title %}Flashcards - Study Viewer{% endblock %}
+
+{% block header %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('index', lang=lang) }}">Topics</a>
+    <span class="separator">/</span>
+    <span class="current">Flashcards</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="flashcard-page">
+    <!-- Stats Bar -->
+    <div class="srs-stats">
+        <div class="srs-stat">
+            <span class="srs-stat__value">{{ stats.total }}</span>
+            <span class="srs-stat__label">Total Cards</span>
+        </div>
+        <div class="srs-stat">
+            <span class="srs-stat__value">{{ stats.due_today }}</span>
+            <span class="srs-stat__label">Due Today</span>
+        </div>
+        <div class="srs-stat">
+            <span class="srs-stat__value">{{ stats.learning }}</span>
+            <span class="srs-stat__label">Learning</span>
+        </div>
+        <div class="srs-stat">
+            <span class="srs-stat__value">{{ stats.mastered }}</span>
+            <span class="srs-stat__label">Mastered</span>
+        </div>
+    </div>
+
+    <!-- Topic Filter -->
+    <div class="flashcard-filter">
+        <label for="topic-filter">Filter by topic:</label>
+        <select id="topic-filter">
+            <option value="">All Topics</option>
+            {% for t in topics %}
+            <option value="{{ t.name }}" {% if topic_filter == t.name %}selected{% endif %}>{{ t.display_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Loading State -->
+    <div class="flashcard-loading" id="flashcard-loading">
+        <p>Loading cards...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="flashcard-empty" id="flashcard-empty" style="display: none;">
+        <h2>No Cards Available</h2>
+        <p>Create concept cards while reading lessons — select text and click "Save as Flashcard" to build your review deck.</p>
+        <a href="{{ url_for('index', lang=lang) }}" class="btn">Browse Topics</a>
+    </div>
+
+    <!-- Flashcard Container -->
+    <div class="flashcard-container" id="flashcard-container" style="display: none;">
+        <div class="session-progress">
+            <div class="session-progress__bar">
+                <div class="session-progress__fill" id="progress-fill"></div>
+            </div>
+            <div class="session-progress__stats">
+                <span><span id="current-card">0</span> / <span id="total-cards">0</span></span>
+            </div>
+        </div>
+
+        <div class="flashcard" id="flashcard">
+            <div class="flashcard-inner" id="flashcard-inner">
+                <div class="flashcard-front">
+                    <div class="flashcard-front__content">
+                        <span class="flashcard-topic" id="card-topic"></span>
+                        <span class="flashcard-question" id="card-question"></span>
+                    </div>
+                    <div class="flashcard-hint">Press Space or click to flip</div>
+                </div>
+                <div class="flashcard-back">
+                    <div class="flashcard-back__content">
+                        <span class="flashcard-question flashcard-question--back" id="card-question-back"></span>
+                        <span class="flashcard-answer" id="card-answer"></span>
+                    </div>
+                    <div class="grade-buttons" id="grade-buttons">
+                        <button class="grade-btn grade-btn--again" data-quality="0" type="button">
+                            <span class="grade-btn__key">1</span>
+                            <span class="grade-btn__label">Again</span>
+                        </button>
+                        <button class="grade-btn grade-btn--hard" data-quality="1" type="button">
+                            <span class="grade-btn__key">2</span>
+                            <span class="grade-btn__label">Hard</span>
+                        </button>
+                        <button class="grade-btn grade-btn--good" data-quality="2" type="button">
+                            <span class="grade-btn__key">3</span>
+                            <span class="grade-btn__label">Good</span>
+                        </button>
+                        <button class="grade-btn grade-btn--easy" data-quality="3" type="button">
+                            <span class="grade-btn__key">4</span>
+                            <span class="grade-btn__label">Easy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Complete -->
+    <div class="session-complete" id="session-complete" style="display: none;">
+        <h2>Session Complete!</h2>
+        <div class="session-complete__stats">
+            <div class="srs-stat">
+                <span class="srs-stat__value" id="summary-total">0</span>
+                <span class="srs-stat__label">Reviewed</span>
+            </div>
+            <div class="srs-stat">
+                <span class="srs-stat__value" id="summary-correct">0</span>
+                <span class="srs-stat__label">Correct</span>
+            </div>
+            <div class="srs-stat">
+                <span class="srs-stat__value" id="summary-accuracy">0%</span>
+                <span class="srs-stat__label">Accuracy</span>
+            </div>
+        </div>
+        <div class="session-complete__actions">
+            <button class="btn" id="restart-btn" type="button">Study Again</button>
+            <a href="{{ url_for('index', lang=lang) }}" class="btn">Browse Topics</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/flashcard.js') }}"></script>
+{% endblock %}
