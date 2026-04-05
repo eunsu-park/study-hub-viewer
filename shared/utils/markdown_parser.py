@@ -92,11 +92,23 @@ def parse_markdown(content: str) -> dict:
     # Restore LaTeX blocks
     html = _restore_latex(html, latex_blocks)
 
+    # Cloze deletion: ==hidden text== → clickable reveal spans
+    html = _convert_cloze(html)
+
     return {
         "html": html,
         "toc": toc,
         "title": title,
     }
+
+
+def _convert_cloze(html: str) -> str:
+    """Convert ==text== markers to cloze deletion spans (active recall)."""
+    return re.sub(
+        r'(?<!=)==(?!=)(.+?)(?<!=)==(?!=)',
+        r'<span class="cloze" tabindex="0" role="button" aria-label="Click to reveal">\1</span>',
+        html,
+    )
 
 
 def extract_title(content: str) -> str:
