@@ -18,13 +18,15 @@ from flask import Flask, render_template, request, jsonify, abort, redirect, url
 # Add parent dir to path so shared/ package is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models import db, User, LessonRead, Bookmark
+from models import db, User, LessonRead, Bookmark, ConceptCard
 from config import Config
 from progress import get_batch_progress, get_batch_read_status, get_batch_bookmark_status, get_path_progress
 from shared.utils.markdown_parser import parse_markdown, parse_markdown_cached, extract_excerpt, estimate_reading_time
 from shared.utils.search import search, build_search_index, build_example_index, build_exercise_index, create_fts_table
 from shared.utils.examples import get_example_topics, get_example_files, highlight_file
 from shared.utils.exercises import get_exercise_topics, get_exercise_files, find_exercise_for_lesson
+from shared.utils.backlinks import get_backlinks
+from srs import calculate_next_review, get_session_cards, get_srs_stats
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -522,6 +524,8 @@ def lesson(lang: str, name: str, filename: str):
             user_id=None, language=lang, topic=name, filename=filename
         ).first() is not None
 
+    backlinks = get_backlinks(CONTENT_DIR, lang, name)
+
     return render_template(
         "lesson.html",
         topic=name,
@@ -534,6 +538,7 @@ def lesson(lang: str, name: str, filename: str):
         prev_lesson=prev_lesson,
         next_lesson=next_lesson,
         exercise=exercise,
+        backlinks=backlinks,
         lang=lang,
         languages=get_available_languages(),
     )
@@ -1006,6 +1011,108 @@ def api_set_language():
     return response
 
 
+# SRS Flashcard Routes
+@app.route("/<lang>/flashcards")
+@validate_lang
+def flashcards(lang: str):
+    """Flashcard study session page."""
+    topic_filter = request.args.get("topic", "")
+    user_id = _get_user_id()
+    stats = get_srs_stats(user_id)
+    topics = get_topics(lang)
+    return render_template(
+        "flashcards.html",
+        topic_filter=topic_filter,
+        stats=stats,
+        topics=topics,
+        lang=lang,
+        languages=get_available_languages(),
+    )
+
+
+@app.route("/api/flashcard/session")
+def api_flashcard_session():
+    """Get cards for a study session."""
+    user_id = _get_user_id()
+    topic = request.args.get("topic") or None
+    cards = get_session_cards(user_id, topic=topic)
+    return jsonify({"cards": cards})
+
+
+@app.route("/api/flashcard/grade", methods=["POST"])
+def api_flashcard_grade():
+    """Grade a flashcard and update SRS state."""
+    data = request.get_json()
+    card_id = data.get("card_id")
+    quality = data.get("quality", 2)
+    user_id = _get_user_id()
+
+    card = ConceptCard.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    result = calculate_next_review(
+        card.ease_factor, card.interval, card.repetitions, quality
+    )
+    card.ease_factor = result["ease_factor"]
+    card.interval = result["interval"]
+    card.repetitions = result["repetitions"]
+    card.next_review = result["next_review"]
+    card.last_reviewed = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({"success": True, "next_review": result["next_review"].isoformat()})
+
+
+@app.route("/api/flashcard/create", methods=["POST"])
+def api_flashcard_create():
+    """Create a new concept card."""
+    data = request.get_json()
+    question = data.get("question", "").strip()
+    answer = data.get("answer", "").strip()
+    topic = data.get("topic", "").strip()
+    filename = data.get("filename", "")
+
+    if not question or not answer or not topic:
+        return jsonify({"error": "question, answer, and topic are required"}), 400
+
+    user_id = _get_user_id()
+
+    existing = ConceptCard.query.filter_by(
+        user_id=user_id, topic=topic, question=question
+    ).first()
+    if existing:
+        return jsonify({"error": "Card already exists"}), 409
+
+    card = ConceptCard(
+        user_id=user_id,
+        topic=topic,
+        filename=filename,
+        question=question,
+        answer=answer,
+    )
+    db.session.add(card)
+    db.session.commit()
+
+    return jsonify({"success": True, "id": card.id})
+
+
+@app.route("/api/flashcard/delete", methods=["POST"])
+def api_flashcard_delete():
+    """Delete a concept card."""
+    data = request.get_json()
+    card_id = data.get("card_id")
+    user_id = _get_user_id()
+
+    card = ConceptCard.query.get(card_id)
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    db.session.delete(card)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
 # CLI Commands
 @app.cli.command("init-db")
 def init_db():
@@ -1021,6 +1128,10 @@ def init_db():
 def build_index():
     """Build the search index for all languages and examples."""
     db_path = Path(app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", ""))
+    # Ensure DB tables and FTS exist (auto-create if missing)
+    with app.app_context():
+        db.create_all()
+    create_fts_table(db_path)
     for lang in SUPPORTED_LANGS:
         lang_content_dir = get_content_dir(lang)
         if lang_content_dir.exists():
