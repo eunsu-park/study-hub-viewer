@@ -1,8 +1,8 @@
 # Study Hub Viewer
 
-A Flask-based web viewer for [Study Hub](https://github.com/eunsu-park/study-hub) with optional multi-user authentication, progress tracking, and full-text search.
+study-hub의 콘텐츠를 렌더링하는 Flask 기반 웹 뷰어. 이중언어 지원과 진도 추적을 제공한다.
 
-[Study Hub](https://github.com/eunsu-park/study-hub) 학습 자료를 위한 Flask 기반 웹 뷰어. 선택적 다중 사용자 인증, 진행률 추적, 전체 텍스트 검색을 지원합니다.
+A Flask-based web viewer that renders [study-hub](https://github.com/eunsu-park/study-hub) content with bilingual support and progress tracking.
 
 ## Prerequisites / 사전 요구사항
 
