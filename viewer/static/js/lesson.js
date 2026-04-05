@@ -88,6 +88,207 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Cloze deletion: click or Enter/Space to reveal hidden text
+    (function initCloze() {
+        document.querySelectorAll('.cloze').forEach(function(el) {
+            function toggle() {
+                el.classList.toggle('revealed');
+            }
+            el.addEventListener('click', toggle);
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle();
+                }
+            });
+        });
+    })();
+
+    // Create Flashcard from lesson
+    (function initCreateCard() {
+        document.querySelectorAll('[data-action="create-card"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var selection = window.getSelection().toString().trim();
+
+                // Build modal
+                var modal = document.createElement('div');
+                modal.className = 'create-card-modal';
+                modal.innerHTML =
+                    '<div class="create-card-modal__content">' +
+                    '<h3>Create Flashcard</h3>' +
+                    '<label for="card-question">Question (front)</label>' +
+                    '<textarea id="card-question" rows="3" placeholder="What is...?"></textarea>' +
+                    '<label for="card-answer">Answer (back)</label>' +
+                    '<textarea id="card-answer" rows="3" placeholder="The answer...">' +
+                    (selection || '') + '</textarea>' +
+                    '<div class="create-card-modal__actions">' +
+                    '<button class="btn" id="card-cancel">Cancel</button>' +
+                    '<button class="btn btn-read active" id="card-save">Save</button>' +
+                    '</div></div>';
+
+                document.body.appendChild(modal);
+
+                document.getElementById('card-cancel').addEventListener('click', function() {
+                    modal.remove();
+                });
+
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.remove();
+                });
+
+                document.getElementById('card-save').addEventListener('click', function() {
+                    var q = document.getElementById('card-question').value.trim();
+                    var a = document.getElementById('card-answer').value.trim();
+                    if (!q || !a) return;
+
+                    fetch('/api/flashcard/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            question: q,
+                            answer: a,
+                            topic: topic,
+                            filename: filename
+                        })
+                    }).then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            modal.remove();
+                            // Brief feedback
+                            btn.querySelector('.text').textContent = 'Saved!';
+                            setTimeout(function() {
+                                btn.querySelector('.text').textContent = 'Flashcard';
+                            }, 2000);
+                        } else {
+                            alert(data.error || 'Failed to save card');
+                        }
+                    });
+                });
+
+                // Focus question input
+                document.getElementById('card-question').focus();
+            });
+        });
+    })();
+
+    // Reading position memory (localStorage)
+    (function initReadingPosition() {
+        var key = 'reading-pos:' + topic + '/' + filename;
+        var saved = localStorage.getItem(key);
+
+        // Restore position after a short delay so the page is fully rendered
+        if (saved) {
+            var pos = JSON.parse(saved);
+            // Only restore if user hasn't finished (not at top, not fully read)
+            if (pos.scrollY > 100) {
+                requestAnimationFrame(function() {
+                    window.scrollTo(0, pos.scrollY);
+                });
+            }
+        }
+
+        // Debounced save on scroll
+        var saveTimer = null;
+        window.addEventListener('scroll', function() {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(function() {
+                localStorage.setItem(key, JSON.stringify({
+                    scrollY: window.scrollY,
+                    ts: Date.now()
+                }));
+            }, 300);
+        });
+
+        // Clean up old entries (keep last 100)
+        try {
+            var posKeys = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && k.startsWith('reading-pos:')) posKeys.push(k);
+            }
+            if (posKeys.length > 100) {
+                var entries = posKeys.map(function(k) {
+                    var v = JSON.parse(localStorage.getItem(k) || '{}');
+                    return { key: k, ts: v.ts || 0 };
+                }).sort(function(a, b) { return a.ts - b.ts; });
+                // Remove oldest
+                entries.slice(0, entries.length - 100).forEach(function(e) {
+                    localStorage.removeItem(e.key);
+                });
+            }
+        } catch(_) {}
+    })();
+
+    // Floating TOC with scroll-spy
+    (function initFloatingToc() {
+        var tocNav = document.getElementById('floating-toc');
+        var content = document.querySelector('.lesson-content');
+        if (!tocNav || !content) return;
+
+        var headings = content.querySelectorAll('h2, h3');
+        if (headings.length < 2) return;
+
+        // Ensure all headings have ids
+        headings.forEach(function(h, i) {
+            if (!h.id) h.id = 'heading-' + i;
+        });
+
+        // Build TOC HTML
+        var html = '<div class="ftoc-title">On this page</div><ul>';
+        headings.forEach(function(h) {
+            var level = h.tagName === 'H3' ? ' class="ftoc-h3"' : '';
+            html += '<li' + level + '><a href="#' + h.id + '">' + h.textContent + '</a></li>';
+        });
+        html += '</ul>';
+        tocNav.innerHTML = html;
+
+        var links = tocNav.querySelectorAll('a');
+
+        // Scroll-spy via IntersectionObserver
+        var activeIndex = 0;
+
+        function setActive(index) {
+            if (index === activeIndex && links[index].classList.contains('active')) return;
+            links.forEach(function(a) { a.classList.remove('active'); });
+            if (links[index]) {
+                links[index].classList.add('active');
+                activeIndex = index;
+                // Scroll the TOC so the active item is visible
+                links[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var idx = Array.prototype.indexOf.call(headings, entry.target);
+                    if (idx !== -1) setActive(idx);
+                }
+            });
+        }, {
+            rootMargin: '-80px 0px -70% 0px',
+            threshold: 0
+        });
+
+        headings.forEach(function(h) { observer.observe(h); });
+
+        // Smooth scroll on click
+        tocNav.addEventListener('click', function(e) {
+            var link = e.target.closest('a');
+            if (!link) return;
+            e.preventDefault();
+            var target = document.getElementById(link.getAttribute('href').slice(1));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        setActive(0);
+    })();
+
     // Keyboard shortcuts: <- -> for lesson navigation
     document.addEventListener('keydown', function(e) {
         const tag = document.activeElement.tagName;
