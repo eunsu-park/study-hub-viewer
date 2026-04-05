@@ -45,6 +45,10 @@
             <span class="icon">{{ icon('list', 16) }}</span>
             <span class="text">Topic list</span>
         </a>
+        <button class="btn btn-flashcard-create" data-action="create-card" title="Create flashcard from selected text">
+            <span class="icon">{{ icon('flashcard', 16) }}</span>
+            <span class="text">Flashcard</span>
+        </button>
         {% if exercise %}
         <a href="{{ url_for('exercise_file_view', lang=lang, topic_name=topic, filepath=exercise.path) }}" class="btn btn-exercise" title="View exercise">
             <span class="icon">{{ icon('exercise', 16) }}</span>
@@ -82,12 +86,32 @@
         {{ content|safe }}
     </div>
 
+    {% if backlinks %}
+    <section class="backlinks">
+        <h2 class="backlinks-title">Related — lessons that reference {{ topic.replace('_', ' ') }}</h2>
+        <ul class="backlinks-list">
+            {% for bl in backlinks %}
+            <li>
+                <a href="{{ url_for('lesson', lang=lang, name=bl.topic, filename=bl.filename) }}">
+                    <span class="backlink-topic">{{ bl.display_topic }}</span>
+                    <span class="backlink-sep">/</span>
+                    <span class="backlink-title">{{ bl.title }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
     {{ lesson_toolbar('bottom') }}
 
     <div class="toolbar-keyboard-hint">
         <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
     </div>
 </article>
+
+<!-- Floating TOC (built dynamically by JS from lesson headings) -->
+<nav class="floating-toc" id="floating-toc" aria-label="Table of Contents"></nav>
 
 <!-- Scroll to top floating button -->
 <button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">&uarr;</button>
